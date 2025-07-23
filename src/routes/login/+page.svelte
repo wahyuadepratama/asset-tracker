@@ -1,16 +1,17 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import axios from 'axios';
   import { onMount } from 'svelte';
   import Icon from '@iconify/svelte';
+  import { login } from '$lib/supabase/auth';
+  import { getCurrentUser } from '$lib/supabase/auth';
 
   let email = '';
   let password = '';
   let errorMsg = '';
 
-  onMount(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
+  onMount(async () => {
+    const { user } = await getCurrentUser();
+    if (user) {
       goto('/dashboard');
     }
   });
@@ -18,39 +19,16 @@
   async function handleLogin() {
     errorMsg = '';
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/token?grant_type=password`,
-        { email, password },
-        {
-          headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const { error } = await login({ email, password });
 
-      const data = response.data;
-
-      if (data.access_token) {
-        const now = Math.floor(Date.now() / 1000); // current timestamp in seconds
-        const expires_in = data.expires_in; // from login response
-        const expires_at = now + expires_in;
-
-        localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('refresh_token', data.refresh_token);
-        localStorage.setItem('expires_in', expires_in.toString());
-        localStorage.setItem('expires_at', expires_at.toString());
-
+      if (error) {
+        errorMsg = error.message;
+      } else {
         goto('/dashboard');
-      } else {
-        errorMsg = data.error_description || 'Login failed';
       }
+
     } catch (error: any) {
-      if (error.response && error.response.data && error.response.data.error_description) {
-        errorMsg = error.response.data.error_description;
-      } else {
-        errorMsg = 'Login failed';
-      }
+      errorMsg = 'Login failed';
     }
   }
 </script>
@@ -89,7 +67,7 @@
         />
       </div>
       <button class="btn-primary" type="submit">
-        <Icon icon="solar:login-3-broken" width="24" height="24" />
+        <Icon icon="solar:login-3-broken" width="20" height="20" />
         <span style="white-space: nowrap;">Login</span>
       </button>
     </form>

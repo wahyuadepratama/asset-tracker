@@ -57,26 +57,6 @@
     flex-wrap: wrap;
   }
 
-  .main-btn {
-    background: linear-gradient(90deg, #4f8cff 0%, #38c6ff 100%);
-    color: white;
-    border: none;
-    border-radius: 2rem;
-    padding: 0.8rem 2.5rem;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 2px 12px rgba(79, 140, 255, 0.13);
-    transition: background 0.2s, transform 0.2s;
-    outline: none;
-  }
-
-  .main-btn:hover,
-  .main-btn:focus {
-    background: linear-gradient(90deg, #38c6ff 0%, #4f8cff 100%);
-    transform: translateY(-2px) scale(1.03);
-  }
-
   @media (max-width: 600px) {
     .welcome-container {
       padding: 1.2rem 0.5rem 1.5rem 0.5rem;
@@ -91,11 +71,6 @@
     .action-btns {
       flex-direction: column;
       gap: 0.8rem;
-    }
-    .main-btn {
-      width: 100%;
-      padding: 0.8rem 0;
-      font-size: 1rem;
     }
   }
 </style>

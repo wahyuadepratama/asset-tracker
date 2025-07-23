@@ -1,38 +1,29 @@
-# sv
+# Asset Tracker
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+_Monitoring your wealth growth month to month_
 
-## Creating a project
+Asset Tracker is an application to monitor your asset growth from month to month. With this app, you can easily record, manage, and analyze your asset categories efficiently.
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Main Features
 
-```bash
-# create a new project in the current directory
-npx sv create
+- **Asset Category Management:** Add, edit, and delete asset categories as needed.
+- **Interactive Dashboard:** View summaries of your assets and your wealth growth each month.
+- **Data Security:** Secure authentication and data storage.
 
-# create a new project in my-app
-npx sv create my-app
-```
+## How to Use
 
-## Developing
+1. **Login** to the application with your account.
+2. **Add asset categories** you want to track.
+3. **View the dashboard** to monitor your wealth growth each month.
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+## Technology
 
-```bash
-npm run dev
+- Svelte
+- Supabase
+- Typescript
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+---
 
-## Building
+Happy tracking your wealth growth!
 
-To create a production version of your app:
 
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
