@@ -15,6 +15,6 @@ echo "🏗️ Building project..."
 npm run build
 
 echo "🟢 Reloading PM2..."
-pm2 startOrReload ecosystem.config.js --env production
+pm2 startOrReload ecosystem.config.cjs --env production
 
 echo "✅ Deployment finished."
