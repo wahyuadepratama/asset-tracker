@@ -36,7 +36,6 @@
   main {
     flex: 1;
     padding: 2rem 1rem;
-    max-width: 900px;
     margin: 0 auto;
     width: 100%;
     box-sizing: border-box;

@@ -11,14 +11,16 @@
   <div
     class="modal-backdrop"
     on:click={onClose}
-    transition:fade={{ duration: 30 }}>
+    transition:fade={{ duration: 10 }}>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div
       class="modal"
       on:click|stopPropagation
-      transition:scale={{ duration: 30, start: 0.96 }}>
-      <slot />
+      transition:scale={{ duration: 10, start: 1 }}>
+      <div class="modal-scrollable-content">
+        <slot />
+      </div>
       <button class="modal-close-btn" on:click={onClose} aria-label="Tutup modal">
         &times;
       </button>
@@ -51,6 +53,13 @@
     animation: modal-pop 0.22s cubic-bezier(.4,1.4,.6,1) both;
     overflow: visible;
     margin: 1rem;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+  }
+  .modal-scrollable-content {
+    max-height: 70vh;
+    padding-bottom: 2.5rem;
   }
   @keyframes modal-pop {
     0% { transform: scale(0.96) translateY(16px); opacity: 0.7; }
@@ -69,6 +78,7 @@
     border-radius: 50%;
     transition: background 0.15s, color 0.15s;
     line-height: 1;
+    z-index: 2;
   }
   .modal-close-btn:hover, .modal-close-btn:focus {
     background: #f1f5f9;
@@ -79,6 +89,10 @@
     .modal {
       max-width: 97vw;
       padding: 1.2rem 0.7rem 1.2rem 0.7rem;
+      max-height: 97vh;
+    }
+    .modal-scrollable-content {
+      max-height: 65vh;
     }
     .modal-close-btn {
       top: 0.7rem;
