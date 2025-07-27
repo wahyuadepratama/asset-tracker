@@ -55,4 +55,10 @@
     .error-status { font-size:2.5rem; }
     .error-title { font-size:1.2rem; }
   }
+
+  .btn-primary { background:linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%); color:var(--color-header-text); border:none; border-radius:2rem; font-size:clamp(0.95rem,2.5vw,1.1rem); font-weight:600; cursor:pointer; box-shadow:0 2px 12px var(--color-btn-shadow,rgba(79,140,255,0.12)); transition:background 0.2s,transform 0.2s; display:flex; align-items:center; gap:0.5em; padding:0.5em 1em; width:100%; justify-content:center; margin-top:0.7em; box-sizing:border-box; }
+  .btn-primary:hover { background:linear-gradient(90deg, var(--color-secondary) 0%, var(--color-primary) 100%); transform:translateY(-2px) scale(1.03); }
+  @media (max-width:700px) {
+    .btn-primary { padding:0.5rem 0.4rem; font-size:0.7rem; }
+  }
 </style>
