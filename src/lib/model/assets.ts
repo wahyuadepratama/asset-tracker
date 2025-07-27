@@ -24,12 +24,13 @@ export const getAssetsWithCategory = async (access_token: string, categoryId: st
   return res;
 }
 
-export const addAsset = async (access_token: string, assetName: string, assetDescription: string, assetCategoryId: string, assetCurrency: string, userId: string) => {
+export const addAsset = async (access_token: string, assetName: string, assetDescription: string, assetCategoryId: string, assetCurrency: string, depreciationRate: number, userId: string) => {
   const res = await axios.post(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/assets`, {
     name: assetName,
     description: assetDescription,
     category_id: assetCategoryId,
     currency: assetCurrency,
+    depreciation_rate: depreciationRate,
     user_id: userId
   }, {
     headers: {

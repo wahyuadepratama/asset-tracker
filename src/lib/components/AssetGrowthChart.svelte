@@ -5,7 +5,7 @@
   // assetHistory bisa berisi total_assets dalam bentuk string (misal: "2.5M", "1.2K") atau number
   export let assetHistory: { date: string; total_assets: number | string }[] = [];
 
-  let canvasEl: HTMLCanvasElement;
+  let canvasEl: HTMLCanvasElement | null = null;
   let chart: Chart | undefined;
 
   // Fungsi untuk mengubah string "2.5M" atau "1.2K" ke number
@@ -100,7 +100,7 @@
       chart.destroy();
     }
 
-    chart = new Chart(canvasEl, {
+    chart = new Chart(canvasEl!, {
       type: 'line',
       data: {
         labels: labels.map(formatMonthLabel),

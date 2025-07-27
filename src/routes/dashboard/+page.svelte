@@ -32,8 +32,12 @@
   let assetDescription = '';
   let assetCategoryId = '';
   let assetCurrency = '';
+  let depreciationRate = '';
 
   let selectedAsset: any = null;
+  let displayValueCurrency = '';
+  let zeroValueAsset = 'hide';
+
   let newHistory: any = {
     year: new Date().getFullYear(),
     month: '',
@@ -41,15 +45,6 @@
     value_in_currency: '',
     note: '',
   };
-
-  const asset_history = [
-    { date: '2025-01-12', total_assets: 5000000 },
-    { date: '2025-01-20', total_assets: 2000000 },
-    { date: '2025-02-10', total_assets: 8000000 },
-    { date: '2025-03-05', total_assets: 10000000 },
-    { date: '2025-03-28', total_assets: 1500000 },
-    { date: '2025-04-15', total_assets: 3000000 },
-  ];
 
   onMount(async () => {
     try {
@@ -141,6 +136,46 @@
         total_value: lastHistory ? Number(lastHistory.value_in_currency) : 0,
       };
     });
+  }
+
+  function handleOnTypeInputNumber() {
+    const value = newHistory.value_in_currency;
+
+    // Convert value to string before replace
+    let strValue = String(value);
+    // Remove non-numeric except comma and dot
+    let num = strValue.replace(/[^0-9.,]/g, '');
+    // Replace comma with dot for decimal, but we will ignore decimals
+    num = num.replace(',', '.');
+    // Parse to float, then to int (ignore decimals)
+    let intVal = parseInt(Number(num).toString().split('.')[0]);
+    if (isNaN(intVal)) intVal = 0;
+    // Format to Indonesian Rupiah without decimals
+    displayValueCurrency = intVal.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  function checkDepreciationRate(asset: any) {
+    let filteredHistory = assetHistory
+      .filter((history: any) => history.asset_id === asset.id)
+      .sort((a: any, b: any) => {
+        if (a.year !== b.year) {
+          return b.year - a.year;
+        }
+        return b.month - a.month;
+      });
+    let latestHistory = filteredHistory[0] !== undefined ? filteredHistory[0] : 0;
+
+    if (latestHistory !== 0) {
+      newHistory.value = latestHistory.value;
+      if(selectedAsset.depreciation_rate) {
+        let result = latestHistory.value_in_currency * (1 - selectedAsset.depreciation_rate / 100);
+        newHistory.value_in_currency = parseInt(String(result).replace(/,/g, ''));
+      } else {
+        newHistory.value_in_currency = latestHistory.value_in_currency;
+      }
+    }
+
+    handleOnTypeInputNumber();
   }
 
   async function handleFilterChart() {
@@ -270,7 +305,11 @@
         throw new Error('Failed to get access token');
       }
 
-      const res = await addAsset(access_token, assetName, assetDescription, assetCategoryId, assetCurrency, user.id);
+      // Bersihkan input depreciationRate: hapus %, ganti koma dengan titik, lalu konversi ke number
+      let cleanedDepreciationRate = depreciationRate.replace('%', '').replace(',', '.').trim();
+      const depreciationRateNumber = Number(cleanedDepreciationRate);
+
+      const res = await addAsset(access_token, assetName, assetDescription, assetCategoryId, assetCurrency, depreciationRateNumber, user.id);
       if (Math.floor(res.status / 100) !== 2) {
         throw new Error('Failed to add asset');
       }
@@ -333,12 +372,12 @@
       return;
     }
 
-    if (newHistory.value.trim() === '') {
+    if (String(newHistory.value).trim() === '') {
       alert('Value cannot be empty');
       return;
     }
 
-    if (newHistory.value_in_currency.trim() === '') {
+    if (String(newHistory.value_in_currency).trim() === '') {
       alert('Value in currency cannot be empty');
       return;
     }
@@ -357,19 +396,22 @@
             newHistory.year.toString(),
             (() => {
               // Ganti koma dengan titik
-              let val = newHistory.value.replaceAll(',', '.');
+              let val = String(newHistory.value).replaceAll(',', '.');
               // Cek apakah ada titik desimal
               if (val.includes('.')) {
                 // Pisahkan bagian desimal
                 const [intPart, decPart] = val.split('.');
                 // Jika ada lebih dari 8 digit di belakang koma, potong jadi 8
                 if (decPart.length > 8) {
-                  return intPart + '.' + decPart.slice(0, 8);
+                  return Number(intPart + '.' + decPart.slice(0, 8));
                 }
               }
-              return val;
+              return Number(val);
             })(),
-            newHistory.value_in_currency.replaceAll(',', '.'),
+            (() => {
+              let val = String(newHistory.value_in_currency).replaceAll(',', '.');
+              return Number(val);
+            })(),
             newHistory.note
           );
           if (Math.floor(res.status / 100) !== 2) {
@@ -447,25 +489,31 @@
 </div>
 {/if}
 
-<!-- Asset Growth Chart -->
-<div class="asset-growth-chart-container-title">
-  <select class="input" bind:value={selectedChartCategoryId} on:change={() => handleFilterChart()}>
-    <option value="" disabled selected>Select Category</option>
-    <option value="all">All Categories</option>
-    {#each assetCategories as category}
-      <option value={category.id}>{category.name}</option>
-    {/each}
-  </select>
-</div>
-{#if dataChart.length > 0}
-  <div class="asset-growth-chart-container">
-    <AssetGrowthChart assetHistory={dataChart} />
+{#if !loading}
+  <!-- Asset Growth Chart -->
+  <div class="asset-growth-chart-container-title">
+    <select class="input" bind:value={selectedChartCategoryId} on:change={() => handleFilterChart()}>
+      <option value="" disabled selected>Select Category</option>
+      <option value="all">All Categories</option>
+      {#each assetCategories as category}
+        <option value={category.id}>{category.name}</option>
+      {/each}
+    </select>
+    <select class="input" bind:value={zeroValueAsset}>
+      <option value="hide">Hide Zero Value Asset</option>
+      <option value="show">Show Zero Value Asset</option>
+    </select>
   </div>
-{/if}
-{#if dataChart.length === 0 && selectedChartCategoryId !== 'all'}
-  <div class="asset-growth-chart-container-empty">
-    <p class="asset-growth-chart-description">No Chart Data Available. Please select a category to see the chart.</p>
-  </div>
+  {#if dataChart.length > 0}
+    <div class="asset-growth-chart-container">
+      <AssetGrowthChart assetHistory={dataChart} />
+    </div>
+  {/if}
+  {#if dataChart.length === 0 && selectedChartCategoryId !== 'all'}
+    <div class="asset-growth-chart-container-empty">
+      <p class="asset-growth-chart-description">No Chart Data Available. Please select a category to see the chart.</p>
+    </div>
+  {/if}
 {/if}
 
 {#if assetCategories.length > 0}
@@ -500,11 +548,19 @@
     <hr style="margin: 0.5rem 0;border-color: #d9dbdf4f;">
     {#if assets.filter((asset: any) => asset.category_id === category.id).length > 0}
       {#each assets.filter((asset: any) => asset.category_id === category.id) as asset (asset.id)}
+      {#if asset.total_value > 0 || zeroValueAsset === 'show'}
       <div class="asset-title-row">
         <h5 class="asset-title-row-name">
           {asset.name} {#if asset.description} ({asset.description}) {/if}
+          {#if asset.depreciation_rate}
+            <small style="color: #9ca3af; font-size: 0.7em; margin-top: 0.5em; display: block;">
+              <i>Depreciation: {asset.depreciation_rate}% / Month</i>
+            </small>
+          {/if}
         </h5>
-        <h5 style="margin-bottom: 0.5rem; text-align: left;">{asset.currency} {Number(asset.total_value).toLocaleString('id-ID')}</h5>
+        <h5 style="margin-bottom: 0.5rem; text-align: left;">
+          {asset.currency} {Number(asset.total_value).toLocaleString('id-ID')}
+        </h5>
       </div>
       <div class="table-responsive">
         <table class="asset-table">
@@ -551,6 +607,7 @@
             <tr style="cursor: pointer;" on:click={() => {
               showAddAssetHistoryModal = true;
               selectedAsset = asset;
+              checkDepreciationRate(asset);
             }}>
               <td colspan="6" class="empty-row">
                 + Add new history
@@ -559,6 +616,7 @@
           </tfoot>
         </table>
       </div>
+      {/if}
     {/each}
     {/if}
   </div>
@@ -712,6 +770,12 @@
           <option value="AUD">AUD</option>
         </select>
       </div>
+      <div class="form-group">
+        <input type="text" placeholder="Depreciation % per Month (Optional)" class="input" required bind:value={depreciationRate} />
+        <small style="color: #9ca3af; font-size: 0.7em; margin-bottom: 0.5em; margin-left: 0.5em; display: block;">
+          <i>Eg: Car: 1.5%, Laptop: 1.6%, Phone: 2.8%</i>
+        </small>
+      </div>
       <button type="submit" class="btn-primary btn-block">Add</button>
     </form>
   </div>
@@ -755,9 +819,12 @@
         </select>
       </div>
         <div class="form-group">
-          <label for="assetId">{selectedAsset.name}</label>
+          <label for="assetId">{selectedAsset.name} {#if selectedAsset.description} ({selectedAsset.description}) {/if}</label>
           <input type="text" placeholder="Asset Value" class="input" required bind:value={newHistory.value} />
-          <input type="text" placeholder="Asset Value in Currency" class="input" required bind:value={newHistory.value_in_currency} />
+          <input type="number" placeholder="Asset Value in Currency" class="input" required bind:value={newHistory.value_in_currency} on:input={handleOnTypeInputNumber} />
+          <small style="color: #9ca3af; font-size: 0.7em; margin-bottom: 0.5em; margin-left: 0.5em; display: block;">
+            <i>Currency Format: {selectedAsset.currency} {displayValueCurrency}</i>
+          </small>
           <input type="text" placeholder="Note" class="input" bind:value={newHistory.note} />
         </div>
       <button
