@@ -3,11 +3,12 @@
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import Icon from '@iconify/svelte';
-  import { login } from '$lib/supabase/auth';
+  import { register } from '$lib/supabase/auth';
   import { getCurrentUser } from '$lib/supabase/auth';
 
   let email = '';
   let password = '';
+  let confirmPassword = '';
   let errorMsg = '';
 
   onMount(async () => {
@@ -17,10 +18,14 @@
     }
   });
 
-  async function handleLogin() {
+  async function handleRegister() {
     errorMsg = '';
     try {
-      const { error } = await login({ email, password });
+      if (password !== confirmPassword) {
+        errorMsg = 'Password and confirm password do not match';
+        return;
+      }
+      const { error } = await register({ email, password });
 
       if (error) {
         errorMsg = error.message;
@@ -29,22 +34,22 @@
       }
 
     } catch (error: any) {
-      errorMsg = 'Login failed';
+      errorMsg = 'Register failed';
     }
   }
 </script>
 
 <svelte:head>
-  <title>Login - Asset Tracker</title>
+  <title>Register - Asset Tracker</title>
 </svelte:head>
 
 <div class="login-container">
   <div class="login-card">
-    <div class="login-title">Login to your account</div>
+    <div class="login-title">Register to your account</div>
     {#if errorMsg}
       <div class="login-error">{errorMsg}</div>
     {/if}
-    <form class="login-form" on:submit|preventDefault={handleLogin}>
+    <form class="login-form" on:submit|preventDefault={handleRegister}>
       <div class="form-group">
         <label for="email">Email</label>
         <input
@@ -67,9 +72,20 @@
           autocomplete="current-password"
         />
       </div>
+      <div class="form-group">
+        <label for="confirm-password">Confirm Password</label>
+        <input
+          id="confirm-password"
+          type="password"
+          bind:value={confirmPassword}
+          required
+          placeholder="Confirm your password"
+          autocomplete="new-password"
+        />
+      </div>
       <button class="btn-primary" type="submit">
         <Icon icon="solar:login-3-broken" width="20" height="20" />
-        <span style="white-space: nowrap;">Login</span>
+        <span style="white-space: nowrap;">Register</span>
       </button>
     </form>
     <div class="login-footer">

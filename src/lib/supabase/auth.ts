@@ -4,6 +4,10 @@ export async function login({ email, password }: { email: string, password: stri
   return await supabase.auth.signInWithPassword({ email, password });
 }
 
+export async function register({ email, password }: { email: string, password: string }) {
+  return await supabase.auth.signUp({ email, password });
+}
+
 export async function logout() {
   return await supabase.auth.signOut();
 }

@@ -1,4 +1,5 @@
 <script>
+  import '../global.css';
   export let error;
   export let status;
 </script>
@@ -25,6 +26,7 @@
     box-shadow: 0 4px 24px rgba(79, 140, 255, 0.08);
     margin: 3rem auto;
     max-width: 480px;
+    font-family: var(--font-family-sans);
   }
 
   .error-status {
@@ -33,6 +35,7 @@
     color: var(--color-footer-text);
     margin-bottom: 0.5rem;
     letter-spacing: 2px;
+    font-family: var(--font-family-sans);
   }
 
   .error-title {
@@ -41,6 +44,7 @@
     color: var(--color-footer-text-2);
     margin-bottom: 0.5rem;
     text-align: center;
+    font-family: var(--font-family-sans);
   }
 
   .error-message {
@@ -49,6 +53,7 @@
     margin-bottom: 2rem;
     text-align: center;
     word-break: break-word;
+    font-family: var(--font-family-sans);
   }
   @media (max-width:600px) {
     .error-container { margin:2rem 0.5rem; padding:1.5rem 0.5rem; max-width:98vw; }
