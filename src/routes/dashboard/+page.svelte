@@ -69,6 +69,29 @@
         }
         const data = res.data;
         assetCategories = data;
+        if (!data || data.length === 0) {
+          // Tambahkan kategori: Asset Liquid
+          categoryName = 'Asset Liquid';
+          categoryDescription = 'Aset yang mudah dicairkan menjadi uang tunai tanpa kehilangan nilai signifikan. Contohnya: uang di rekening, emas, reksa dana, cryptocurrency, dan piutang';
+          isLiability = false;
+          await handleAddCategory();
+
+          // Tambahkan kategori: Asset Non Liquid
+          categoryName = 'Asset Non Liquid';
+          categoryDescription = 'Aset yang membutuhkan waktu atau proses lebih lama untuk dicairkan menjadi uang tunai, biasanya memiliki nilai tetap atau mengalami penyusutan. Contohnya: mobil, rumah, laptop, dan properti lainnya';
+          isLiability = false;
+          await handleAddCategory();
+
+          // Tambahkan kategori: Hutang
+          categoryName = 'Hutang';
+          categoryDescription = 'Kewajiban finansial yang harus dibayarkan di masa depan. Termasuk utang pribadi, cicilan kendaraan, pinjaman online, atau pinjaman dari teman/kerabat';
+          isLiability = true;
+          await handleAddCategory();
+
+          categoryName = '';
+          categoryDescription = '';
+          isLiability = false;
+        }
 
         // Fetch assets
         const assetsRes = await getAssets(access_token);
