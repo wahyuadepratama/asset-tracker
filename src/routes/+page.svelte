@@ -22,7 +22,20 @@
 
 <svelte:head>
   <title>Asset Tracker - Smart Asset Tracking</title>
-  <meta name="description" content="Asset Tracker: A free, elegant, and modern solution to track all your assets efficiently.">
+  <meta name="description" content="Asset Tracker: solusi gratis dan modern untuk melacak semua aset pribadi sampai bisnis kecil dengan efisien. Monitoring pertumbuhan aset kamu dengan mudah.">
+  <meta name="keywords" content="Asset Tracker, Aset, Pribadi, Bisnis, UMKM, Efisien, Modern, Gratis, Solusi, Monitoring, Pertumbuhan, Aset">
+  <meta name="author" content="Asset Tracker">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow">
+  <meta name="google" content="notranslate">
+
+  <meta property="og:title" content="Asset Tracker - Smart Asset Tracking">
+  <meta property="og:url" content="https://tracker.ajakan.me">
+  <meta property="og:description" content="Asset Tracker adalah solusi gratis dan modern untuk melacak semua aset kamu, pribadi maupun bisnis kecil - menengah dengan efisien. Monitoring pertumbuhan aset kamu dengan mudah.">
+  <meta property="og:image" content="https://ajakan.me/admin-theme/dist/img/ajakan.png">
+  <meta property="og:site_name" content="Asset Tracker">
+  <meta property="og:type" content="website">
 </svelte:head>
 
 <div class="landing-page-container">
@@ -30,9 +43,9 @@
     <div class="logo">Asset Tracker</div>
 
     <button class="hamburger-menu" on:click={toggleMobileMenu} aria-label="Toggle navigation menu">
-      <span class="bar" />
-      <span class="bar" />
-      <span class="bar" />
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
     </button>
 
     <nav class="nav" class:open={isMobileMenuOpen}>
@@ -84,16 +97,6 @@
 </div>
 
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    font-family: var(--font-family-sans);
-    line-height: 1.6;
-    color: var(--color-text-dark);
-    background-color: var(--color-background-light);
-    scroll-behavior: smooth;
-  }
-
   h1, h2, h3 {
     font-family: var(--font-family-sans);
     font-size: 1.35rem;
@@ -102,8 +105,7 @@
     margin-bottom: 0.5em;
     line-height: 1.3;
   }
-
-  p, li {
+  p {
     font-family: var(--font-family-sans);
     font-size: 1.05rem;
     color: var(--color-text-light);
@@ -251,19 +253,6 @@
       margin: var(--spacing-sm) 0 !important; /* Overwrite margin-right */
       padding: var(--spacing-md);
       font-size: 1.1rem;
-    }
-
-    /* Hamburger animation */
-    .hamburger-menu.open .bar:nth-child(1) {
-      transform: translateY(9px) rotate(45deg);
-    }
-
-    .hamburger-menu.open .bar:nth-child(2) {
-      opacity: 0;
-    }
-
-    .hamburger-menu.open .bar:nth-child(3) {
-      transform: translateY(-9px) rotate(-45deg);
     }
   }
 

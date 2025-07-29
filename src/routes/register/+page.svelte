@@ -10,6 +10,7 @@
   let password = '';
   let confirmPassword = '';
   let errorMsg = '';
+  let successMsg = '';
 
   onMount(async () => {
     const { user } = await getCurrentUser();
@@ -30,7 +31,7 @@
       if (error) {
         errorMsg = error.message;
       } else {
-        goto('/dashboard');
+        successMsg = 'Register success. Please check your email for verification.';
       }
 
     } catch (error: any) {
@@ -48,6 +49,9 @@
     <div class="login-title">Register to your account</div>
     {#if errorMsg}
       <div class="login-error">{errorMsg}</div>
+    {/if}
+    {#if successMsg}
+      <div class="login-success">{successMsg}</div>
     {/if}
     <form class="login-form" on:submit|preventDefault={handleRegister}>
       <div class="form-group">
@@ -138,8 +142,18 @@
     font-family: var(--font-family-sans);
   }
   .login-error {
-    color: #e11d48; /* No variable for error red, fallback to hex */
-    background: #fef2f2; /* No variable for error bg, fallback to hex */
+    color: #e11d48;
+    background: #fef2f2;
+    border-radius: 0.5rem;
+    padding: 0.7rem 1rem;
+    font-size: 1rem;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-family-sans);
+  }
+  .login-success {
+    color: #15803d;
+    background: #f0fdf4;
     border-radius: 0.5rem;
     padding: 0.7rem 1rem;
     font-size: 1rem;
@@ -177,7 +191,7 @@
   }
   input[type="email"]:focus,
   input[type="password"]:focus {
-    border-color: #38bdf8; /* No variable for focus blue, fallback to hex */
+    border-color: #38bdf8;
     background: var(--color-background-dark);
   }
   .login-footer {
@@ -195,7 +209,7 @@
     transition: color 0.2s;
   }
   .register-link:hover {
-    color: #38bdf8; /* No variable for hover blue, fallback to hex */
+    color: #38bdf8;
     text-decoration: underline;
   }
 
@@ -247,6 +261,10 @@
       font-size: 0.8rem !important;
     }
     .login-error {
+      font-size: 0.7rem !important;
+      padding: 0.5rem 0.5rem !important;
+    }
+    .login-success {
       font-size: 0.7rem !important;
       padding: 0.5rem 0.5rem !important;
     }
