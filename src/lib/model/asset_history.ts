@@ -2,14 +2,22 @@ import { supabase } from "$lib/supabase/client";
 import { error } from "@sveltejs/kit";
 import axios from "axios";
 
-export const getAssetHistory = async (access_token: string) => {
-  const res = await axios.get(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/asset_history?select=*&order=year.desc,month.desc`, {
-    headers: {
-      'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${access_token}`,
-      'Content-Type': 'application/json'
+export const getAssetHistory = async (
+  access_token: string
+) => {
+  const end_year = new Date().getFullYear();
+  const start_year = end_year - 2;
+
+  const res = await axios.get(
+    `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/asset_history?select=*&order=year.desc,month.desc&year=gte.${start_year}&year=lte.${end_year}`,
+    {
+      headers: {
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${access_token}`,
+        'Content-Type': 'application/json'
+      }
     }
-  });
+  );
 
   return res;
 }
@@ -60,10 +68,13 @@ export const deleteAssetHistory = async (access_token: string, assetHistoryId: s
   return res;
 }
 
-export const getDataChartByCategory = async (categoryId: string) => {
+export const getDataChartByCategory = async (categoryId: string, start_year: number, end_year: number) => {
   try {
-    const { data: result, error: rpcError } = await supabase.rpc('get_category_total_assets_by_month', {
-      p_category_id: categoryId
+
+    const { data: result, error: rpcError } = await supabase.rpc('get_all_category_total_assets_by_month_with_param', {
+      p_category_id: categoryId,
+      p_start_year: start_year === 0 ? new Date().getFullYear() : start_year,
+      p_end_year: end_year === 0 ? new Date().getFullYear() : end_year
     });
 
     if (rpcError) {
@@ -83,9 +94,12 @@ export const getDataChartByCategory = async (categoryId: string) => {
   }
 }
 
-export const getDataChart = async () => {
+export const getDataChart = async (start_year: number, end_year: number) => {
   try {
-    const { data: result, error: rpcError } = await supabase.rpc('get_all_category_total_assets_by_month');
+    const { data: result, error: rpcError } = await supabase.rpc('get_all_category_total_assets_by_month_with_param', {
+      p_start_year: start_year === 0 ? new Date().getFullYear() : start_year,
+      p_end_year: end_year === 0 ? new Date().getFullYear() : end_year
+    });
 
     if (rpcError) {
       console.error('Error calling Supabase function:', rpcError);

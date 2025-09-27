@@ -3,14 +3,14 @@
   import { goto } from '$app/navigation';
   import Icon from '@iconify/svelte';
 
-  import { logout } from '$lib/supabase/auth';
   import { getCurrentUser, getAccessToken } from '$lib/supabase/auth';
-  import { getAssetCategories, addAssetCategory, deleteAssetCategory } from '$lib/model/asset_categories';
+  import { getAssetCategories, addAssetCategory, deleteAssetCategory, updateAssetCategory } from '$lib/model/asset_categories';
   import { getAssets, addAsset, deleteAsset } from '$lib/model/assets';
   import { getAssetHistory, addAssetHistory, deleteAssetHistory, getDataChart, getDataChartByCategory } from '$lib/model/asset_history';
 
   import Modal from '$lib/components/Modal.svelte';
   import AssetGrowthChart from '$lib/components/AssetGrowthChart.svelte';
+  import AssetValueChart from '$lib/components/AssetValueChart.svelte';
 
   let loading = true;
 
@@ -18,7 +18,10 @@
   let assets: any[] = [];
   let assetHistory: any[] = [];
   let dataChart: any[] = [];
-  let selectedChartCategoryId: string = '';
+  let selectedChartCategoryId: string = 'all';
+  let startYear: string = '';
+  let endYear: string = '';
+  let currentYear: number = new Date().getFullYear();
 
   let showAddCategoryModal = false;
   let showAddAssetModal = false;
@@ -28,6 +31,9 @@
   let categoryDescription = '';
   let isLiability = false;
 
+  let showUpdateCategoryModal = false;
+  let selectedCategory: any = null;
+
   let assetName = '';
   let assetDescription = '';
   let assetCategoryId = '';
@@ -36,7 +42,7 @@
 
   let selectedAsset: any = null;
   let displayValueCurrency = '';
-  let zeroValueAsset = 'hide';
+  let zeroValueAsset = 'show';
 
   let newHistory: any = {
     year: new Date().getFullYear(),
@@ -49,15 +55,16 @@
   onMount(async () => {
     try {
       loading = true;
-      const { user } = await getCurrentUser();
-
-      if (!user) {
-        goto('/login');
-        return;
-      }
+      const { user: currentUser } = await getCurrentUser();
+      console.log(currentUser);
 
       try {
-        const { access_token } = await getAccessToken(user.id);
+        if (!currentUser) {
+          goto('/login');
+          return;
+        }
+
+        const { access_token } = await getAccessToken(currentUser.id);
         if (!access_token) {
           throw new Error('Failed to get access token');
         }
@@ -112,7 +119,7 @@
         calculateTotalValueAssetHistory();
 
         // Get data chart
-        const dataChartRes = await getDataChart();
+        const dataChartRes = await getDataChart(Number(startYear), Number(endYear));
         if (dataChartRes.status !== 200) {
           throw new Error('Failed to fetch data chart');
         }
@@ -210,14 +217,14 @@
 
     try {
       if(selectedChartCategoryId === 'all') {
-        const res = await getDataChart();
+        const res = await getDataChart(Number(startYear), Number(endYear));
         if (Math.floor(res.status / 100) !== 2) {
           throw new Error('Failed to fetch data chart');
         }
         dataChart = [];
         dataChart = [...res.data];
       } else {
-        const res = await getDataChartByCategory(selectedChartCategoryId);
+        const res = await getDataChartByCategory(selectedChartCategoryId, Number(startYear), Number(endYear));
         if (Math.floor(res.status / 100) !== 2) {
           throw new Error('Failed to fetch data chart by category');
         }
@@ -294,9 +301,38 @@
         throw error;
       }
 
-      assetCategories = assetCategories.filter((category) => category.id !== categoryId);
+      assetCategories = assetCategories.filter((category: any) => category.id !== categoryId);
     } catch (err) {
       console.error('Failed to delete category:', err);
+    }
+  }
+
+  async function handleUpdateCategory() {
+    const { user } = await getCurrentUser();
+    if (!user) {
+      goto('/login');
+      return;
+    }
+
+    if (selectedCategory.name.trim() === '') {
+      alert('Category name cannot be empty');
+      return;
+    }
+
+    try {
+      const { access_token } = await getAccessToken(user.id);
+      if (!access_token) {
+        throw new Error('Failed to get access token');
+      }
+
+      const res = await updateAssetCategory(access_token, selectedCategory.id, selectedCategory.name, selectedCategory.description);
+      if (Math.floor(res.status / 100) !== 2) {
+        throw new Error('Failed to update category');
+      }
+
+      assetCategories = assetCategories.map((category: any) => category.id === selectedCategory.id ? res.data[0] : category);
+    } catch (err) {
+      console.error('Failed to update category:', err);
     }
   }
 
@@ -369,7 +405,7 @@
         throw new Error('Failed to delete asset');
       }
 
-      assets = assets.filter((asset) => asset.id !== assetId);
+      assets = assets.filter((asset: any) => asset.id !== assetId);
       calculateTotalValueAssetHistory();
       rearrangeAssetHistory();
 
@@ -469,7 +505,7 @@
         throw new Error('Failed to delete asset history');
       }
 
-      assetHistory = assetHistory.filter((history: any) => history.id !== assetHistoryId);
+      assetHistory = assetHistory.filter((history) => history.id !== assetHistoryId);
       calculateTotalValueAssetHistory();
       rearrangeAssetHistory();
 
@@ -477,11 +513,6 @@
       console.error('Failed to delete asset history:', err);
       alert('Failed to delete asset history');
     }
-  }
-
-  function handleLogout() {
-    logout();
-    goto('/login');
   }
 </script>
 
@@ -496,19 +527,11 @@
 {/if}
 
 {#if !loading}
-<!-- Logout Button -->
 <div class="dashboard-navbar">
-  <button
-    class="btn-primary btn-logout"
-    on:click={handleLogout}>
-    <Icon
-      icon="streamline-flex:logout-1"
-      width="15"
-      height="15"
-      style="flex-shrink: 0; font-weight: bold;"
-    />
-    <span style="white-space: nowrap;">Logout</span>
-  </button>
+  <select class="input" bind:value={zeroValueAsset}>
+    <option value="hide">Hide Zero Value Asset</option>
+    <option value="show">Show Zero Value Asset</option>
+  </select>
 </div>
 {/if}
 
@@ -522,14 +545,44 @@
         <option value={category.id}>{category.name}</option>
       {/each}
     </select>
-    <select class="input" bind:value={zeroValueAsset}>
-      <option value="hide">Hide Zero Value Asset</option>
-      <option value="show">Show Zero Value Asset</option>
-    </select>
+    <div style="display: flex; gap: 0.7rem; align-items: center;">
+      <select
+        id="startYear"
+        class="input"
+        bind:value={startYear}
+        on:change={async () => {
+          await handleFilterChart();
+        }}
+        style="min-width: 90px;"
+      >
+        <option value="" disabled selected={startYear === ''}>Start Year</option>
+        {#each Array.from({ length: 11 }, (_, i) => currentYear - 5 + i) as year}
+          <option value={year} selected={+startYear === year}>{year}</option>
+        {/each}
+      </select>
+      <select
+        id="endYear"
+        class="input"
+        bind:value={endYear}
+        on:change={async () => {
+          await handleFilterChart();
+        }}
+        style="min-width: 90px;"
+      >
+        <option value="" disabled selected={endYear === ''}>End Year</option>
+        {#each Array.from({ length: 11 }, (_, i) => currentYear - 5 + i) as year}
+          <option value={year} selected={+endYear === year}>{year}</option>
+        {/each}
+      </select>
+    </div>
   </div>
   {#if dataChart.length > 0}
     <div class="asset-growth-chart-container">
       <AssetGrowthChart assetHistory={dataChart} />
+      {#if selectedChartCategoryId !== 'all'}
+      <br>
+      <AssetValueChart assetHistory={dataChart} />
+      {/if}
     </div>
   {/if}
   {#if dataChart.length === 0 && selectedChartCategoryId !== 'all'}
@@ -545,21 +598,31 @@
   <div class="dashboard-container">
     <div class="dashboard-title-row">
       <div style="flex: 1 1 auto;">
-        <h2 class="dashboard-title">{category.name} {#if category.is_liability} (Liability) {/if}</h2>
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+        <h2 class="dashboard-title" on:click={() => {
+          showUpdateCategoryModal = true;
+          selectedCategory = category;
+        }} on:keydown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            showUpdateCategoryModal = true;
+            selectedCategory = category;
+          }
+        }}>{category.name} {#if category.is_liability} (Liability) {/if} <Icon icon="mdi:pencil" width="20" height="20"/>
+        </h2>
         {#if category.description}
           <small class="dashboard-title-description">
             {category.description}
           </small>
         {/if}
       </div>
-      <div style="display: flex; gap: 0.5rem; margin-left: auto;">
+      <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-left: auto;">
         <button class="btn-primary" title="Add Asset" style="display: flex; align-items: center; gap: 0.3rem;" on:click={() => {
           showAddAssetModal = true;
           assetCategoryId = category.id;
         }}>
           <Icon icon="mdi:plus" width="22" height="22" />
         </button>
-        {#if assets.filter((asset: any) => asset.category_id === category.id).length === 0}
+        {#if assets.filter((asset) => asset.category_id === category.id).length === 0}
         <button class="btn-primary btn-delete" title="Delete Category" style="display: flex; align-items: center; gap: 0.3rem;" on:click={() => {
           handleDeleteCategory(category.id);
         }}>
@@ -569,8 +632,8 @@
       </div>
     </div>
     <hr style="margin: 0.5rem 0;border-color: #d9dbdf4f;">
-    {#if assets.filter((asset: any) => asset.category_id === category.id).length > 0}
-      {#each assets.filter((asset: any) => asset.category_id === category.id) as asset (asset.id)}
+    {#if assets.filter((asset) => asset.category_id === category.id).length > 0}
+      {#each assets.filter((asset) => asset.category_id === category.id) as asset (asset.id)}
       {#if asset.total_value > 0 || zeroValueAsset === 'show'}
       <div class="asset-title-row">
         <h5 class="asset-title-row-name">
@@ -598,8 +661,8 @@
             </tr>
           </thead>
           <tbody>
-            {#if assetHistory.filter((history: any) => history.asset_id === asset.id).length > 0}
-            {#each assetHistory.filter((history: any) => history.asset_id === asset.id) as history (history.id)}
+            {#if assetHistory.filter((history) => history.asset_id === asset.id).length > 0}
+            {#each assetHistory.filter((history) => history.asset_id === asset.id) as history (history.id)}
             <tr>
               <td style="text-align: left; vertical-align: top; width: 10%;">{history.year}</td>
               <td style="text-align: left; vertical-align: top; width: 20%;">
@@ -618,7 +681,7 @@
             {/if}
           </tbody>
           <tfoot class="table-footer">
-            {#if assetHistory.filter((history: any) => history.asset_id === asset.id).length === 0}
+            {#if assetHistory.filter((history) => history.asset_id === asset.id).length === 0}
             <tr style="cursor: pointer;" on:click={() => {
               handleDeleteAsset(asset.id);
             }}>
@@ -758,6 +821,76 @@
   </div>
 </Modal>
 
+<!-- Update Category Modal -->
+<Modal show={showUpdateCategoryModal} onClose={() => showUpdateCategoryModal = false}>
+  <div class="modal-add-category">
+    <h3 class="modal-title">Update Category</h3>
+    <form class="modal-form" on:submit|preventDefault={() => {
+      handleUpdateCategory();
+      showUpdateCategoryModal = false;
+    }}>
+      <div class="form-group">
+        <input
+          type="text"
+          placeholder="Category Name"
+          class="input"
+          required
+          bind:value={selectedCategory.name}
+        />
+      </div>
+      <div class="form-group">
+        <input
+          type="text"
+          placeholder="Description (Optional)"
+          class="input"
+          bind:value={selectedCategory.description}
+        />
+      </div>
+      <style>
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 40px;
+          height: 22px;
+        }
+        .switch input:checked + .slider {
+          background-color: #2563eb;
+        }
+        .switch input:focus + .slider {
+          box-shadow: 0 0 1px #2563eb;
+        }
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-color: #ccc;
+          transition: .3s;
+          border-radius: 22px;
+        }
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 16px;
+          width: 16px;
+          left: 3px;
+          bottom: 3px;
+          background-color: white;
+          transition: .3s;
+          border-radius: 50%;
+        }
+        .switch input:checked + .slider:before {
+          transform: translateX(18px);
+        }
+      </style>
+      <button
+        type="submit"
+        class="btn-primary btn-block">
+        Update
+      </button>
+    </form>
+  </div>
+</Modal>
+
 <!-- Add Asset Modal -->
 <Modal show={showAddAssetModal} onClose={() => showAddAssetModal = false}>
   <div class="modal-add-asset">
@@ -794,7 +927,7 @@
         </select>
       </div>
       <div class="form-group">
-        <input type="text" placeholder="Depreciation % per Month (Optional)" class="input" required bind:value={depreciationRate} />
+        <input type="text" placeholder="Depreciation % per Month (Optional)" class="input" bind:value={depreciationRate} />
         <small style="color: #9ca3af; font-size: 0.7em; margin-bottom: 0.5em; margin-left: 0.5em; display: block;">
           <i>Eg: Car: 1.5%, Laptop: 1.6%, Phone: 2.8%</i>
         </small>
@@ -897,6 +1030,7 @@
     display: flex;
     justify-content: right;
     margin-bottom: 1.5rem;
+    padding-top: 1.5rem;
   }
   .button-container{
     display: flex;
@@ -934,27 +1068,6 @@
   }
   .btn-primary { background:linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%); color:var(--color-header-text); border:none; border-radius:2rem; font-size:clamp(0.95rem,2.5vw,1.1rem); font-weight:600; cursor:pointer; box-shadow:0 2px 12px var(--color-btn-shadow,rgba(79,140,255,0.12)); transition:background 0.2s,transform 0.2s; display:flex; align-items:center; gap:0.5em; padding:0.5em 1em; width:100%; justify-content:center; margin-top:0.7em; box-sizing:border-box; }
   .btn-primary:hover { background:linear-gradient(90deg, var(--color-secondary) 0%, var(--color-primary) 100%); transform:translateY(-2px) scale(1.03); }
-  .btn-logout {
-    background: linear-gradient(90deg, #e11d48 0%, #f87171 100%);
-    color: #fff;
-    font-weight: 600;
-    border: none;
-    border-radius: 2rem;
-    cursor: pointer;
-    box-shadow: 0 2px 12px rgba(225, 29, 72, 0.10);
-    transition: background 0.2s, transform 0.2s;
-    display: flex;
-    width: 100%;
-    align-items: center;
-    gap: 0.5em;
-    font-size: clamp(0.9rem, 2vw, 1.1rem);
-    padding: 0.5em 1em 0.5em 1em !important;
-    max-width: 120px;
-  }
-  .btn-logout:hover {
-    background: linear-gradient(90deg, #f87171 0%, #e11d48 100%);
-    transform: translateY(-2px) scale(1.03);
-  }
   .asset-growth-chart-container {
     width: 100%;
     max-width: 900px;
@@ -1160,10 +1273,6 @@
       margin: 1rem;
     }
     .btn-primary { padding:0.2rem 0.4rem; font-size:0.7rem; }
-    .btn-logout {
-      padding: 0.2rem 0.4rem;
-      font-size: 0.5rem;
-    }
     .asset-table th, .asset-table td {
       padding: 0.5rem 0.5rem;
       font-size: 0.6rem;

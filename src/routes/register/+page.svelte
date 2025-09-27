@@ -31,7 +31,8 @@
       if (error) {
         errorMsg = error.message;
       } else {
-        successMsg = 'Register success. Please check your email for verification.';
+        successMsg = 'Register success. Please login to your account.';
+        goto('/login');
       }
 
     } catch (error: any) {
@@ -93,8 +94,8 @@
       </button>
     </form>
     <div class="login-footer">
-      Don't have an account?
-      <a href="/register" class="register-link">Register</a>
+      Already have an account?
+      <a href="/login" class="register-link">Login</a>
     </div>
     <button
       class="btn-primary"

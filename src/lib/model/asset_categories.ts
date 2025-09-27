@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const getAssetCategories = async (access_token: string) => {
   const res = await axios.get(
-    `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/asset_categories?select=*&order=created_at.asc`,
+    `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/asset_categories?select=*&order=name.asc`,
     {
       headers: {
         'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -35,6 +35,31 @@ export const addAssetCategory = async (access_token: string, categoryName: strin
 
 export const deleteAssetCategory = async (access_token: string, categoryId: string) => {
   const res = await axios.delete(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/asset_categories?id=eq.${categoryId}`, {
+      headers: {
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${access_token}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      }
+    }
+  );
+
+  return res;
+}
+
+export const updateAssetCategory = async (
+  access_token: string,
+  categoryId: string,
+  categoryName: string,
+  categoryDescription: string
+) => {
+  const res = await axios.patch(
+    `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/asset_categories?id=eq.${categoryId}`,
+    {
+      name: categoryName,
+      description: categoryDescription
+    },
+    {
       headers: {
         'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${access_token}`,
