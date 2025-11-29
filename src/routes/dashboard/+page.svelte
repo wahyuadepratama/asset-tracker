@@ -11,6 +11,9 @@
   import Modal from '$lib/components/Modal.svelte';
   import AssetGrowthChart from '$lib/components/AssetGrowthChart.svelte';
   import AssetValueChart from '$lib/components/AssetValueChart.svelte';
+  import AssetAllocationPie from '$lib/components/AssetAllocationPie.svelte';
+  import AssetAllocationDoughnutExLiability from '$lib/components/AssetAllocationDoughnutExLiability.svelte';
+  import AssetAllocationPieLiabilityvsNon from '$lib/components/AssetAllocationPieLiabilityvsNon.svelte';
 
   let loading = true;
 
@@ -583,6 +586,17 @@
       <br>
       <AssetValueChart assetHistory={dataChart} />
       {/if}
+    </div>
+  {/if}
+  {#if dataChart.length > 0 && selectedChartCategoryId === 'all'}
+    <div class="asset-growth-chart-container">
+      <AssetAllocationPie assets={assets} assetCategories={assetCategories} />
+    </div>
+    <div class="asset-growth-chart-container">
+      <AssetAllocationDoughnutExLiability assets={assets} assetCategories={assetCategories} />
+    </div>
+    <div class="asset-growth-chart-container">
+      <AssetAllocationPieLiabilityvsNon assets={assets} assetCategories={assetCategories} />
     </div>
   {/if}
   {#if dataChart.length === 0 && selectedChartCategoryId !== 'all'}
