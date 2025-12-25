@@ -87,6 +87,18 @@
       chartAssetValue.destroy();
     }
 
+    // Fungsi bantu untuk membatasi 4 digit di belakang koma
+    function formatMax4Digit(num: number | string): string {
+      let n: number;
+      if (typeof num === 'string') {
+        n = parseFloat(num.replace(',', '.'));
+      } else {
+        n = num;
+      }
+      // number to string with up to 4 fractional digits. Remove trailing zeroes.
+      return n.toLocaleString('id-ID', { maximumFractionDigits: 4 });
+    }
+
     chartAssetValue = new Chart(canvasElValue, {
       type: 'line',
       data: {
@@ -115,7 +127,8 @@
           tooltip: {
             callbacks: {
               label: function(context) {
-                return formatValue(context.parsed.y);
+                // tampilkan data max 4 digit di blkg koma
+                return formatMax4Digit(context.parsed.y);
               }
             }
           }
@@ -128,7 +141,8 @@
             grace: '2%',
             ticks: {
               callback: function(val: any) {
-                return formatValue(val);
+                // tampilkan data max 4 digit di blkg koma
+                return formatMax4Digit(val);
               },
               padding: 8
             }
