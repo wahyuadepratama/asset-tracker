@@ -47,6 +47,8 @@
   let displayValueCurrency = '';
   let zeroValueAsset = 'show';
 
+  let expandedCategories: Record<string, boolean> = {};
+
   let newHistory: any = {
     year: new Date().getFullYear(),
     month: '',
@@ -517,6 +519,16 @@
       alert('Failed to delete asset history');
     }
   }
+
+  // Make sure this is only once in your module context (put at top if not)
+  // For this snippet's context, assume this addition:
+
+  function toggleCategoryCollapse(categoryId: string) {
+    expandedCategories = {
+      ...expandedCategories,
+      [categoryId]: !expandedCategories[categoryId]
+    };
+  }
 </script>
 
 <svelte:head>
@@ -611,23 +623,36 @@
   {#each assetCategories as category (category.id)}
   <div class="dashboard-container">
     <div class="dashboard-title-row">
-      <div style="flex: 1 1 auto;">
-        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <h2 class="dashboard-title" on:click={() => {
-          showUpdateCategoryModal = true;
-          selectedCategory = category;
-        }} on:keydown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            showUpdateCategoryModal = true;
-            selectedCategory = category;
-          }
-        }}>{category.name} {#if category.is_liability} (Liability) {/if} <Icon icon="mdi:pencil" width="20" height="20"/>
-        </h2>
-        {#if category.description}
-          <small class="dashboard-title-description">
-            {category.description}
-          </small>
-        {/if}
+      <div style="flex: 1 1 auto;display:flex;align-items:center;">
+        <button
+          title={expandedCategories[category.id] ? 'Collapse' : 'Expand'}
+          class="btn-collapser"
+          aria-label={expandedCategories[category.id] ? 'Collapse category' : 'Expand category'}
+          on:click={() => toggleCategoryCollapse(category.id)}
+          style="margin-right: 1rem; border: none; background: transparent; cursor: pointer; display: flex; align-items: center;"
+        >
+          <Icon icon={expandedCategories[category.id] ? "mdi:chevron-down" : "mdi:chevron-right"} width="28" height="28" />
+        </button>
+        <div style="display: flex; flex-direction: column;">
+          <h2 class="dashboard-title" style="margin-left: 0;">
+            <button
+              type="button"
+              class="dashboard-title-button"
+              on:click={() => {
+                showUpdateCategoryModal = true;
+                selectedCategory = category;
+              }}
+            >
+              {category.name} {#if category.is_liability} (Liability) {/if}
+              <Icon icon="mdi:pencil" width="20" height="20"/>
+            </button>
+          </h2>
+          {#if category.description}
+            <small class="dashboard-title-description">
+              {category.description}
+            </small>
+          {/if}
+        </div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-left: auto;">
         <button class="btn-primary" title="Add Asset" style="display: flex; align-items: center; gap: 0.3rem;" on:click={() => {
@@ -646,78 +671,80 @@
       </div>
     </div>
     <hr style="margin: 0.5rem 0;border-color: #d9dbdf4f;">
-    {#if assets.filter((asset) => asset.category_id === category.id).length > 0}
-      {#each assets.filter((asset) => asset.category_id === category.id) as asset (asset.id)}
-      {#if asset.total_value > 0 || zeroValueAsset === 'show'}
-      <div class="asset-title-row">
-        <h5 class="asset-title-row-name">
-          {asset.name} {#if asset.description} ({asset.description}) {/if}
-          {#if asset.depreciation_rate}
-            <small style="color: #9ca3af; font-size: 0.7em; margin-top: 0.5em; display: block;">
-              <i>Depreciation: {asset.depreciation_rate}% / Month</i>
-            </small>
-          {/if}
-        </h5>
-        <h5 style="margin-bottom: 0.5rem; text-align: left;">
-          {asset.currency} {Number(asset.total_value).toLocaleString('id-ID')}
-        </h5>
-      </div>
-      <div class="table-responsive">
-        <table class="asset-table">
-          <thead class="table-header">
-            <tr>
-              <th>Year</th>
-              <th>Month</th>
-              <th>Total Asset</th>
-              <th>Value in Currency</th>
-              <th>Note</th>
-              <th style="text-align: center;">#</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#if assetHistory.filter((history) => history.asset_id === asset.id).length > 0}
-            {#each assetHistory.filter((history) => history.asset_id === asset.id) as history (history.id)}
-            <tr>
-              <td style="text-align: left; vertical-align: top; width: 10%;">{history.year}</td>
-              <td style="text-align: left; vertical-align: top; width: 20%;">
-                {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(history.month)-1]}
-              </td>
-              <td style="text-align: left; vertical-align: top; width: 10%;">{history.value}</td>
-              <td style="text-align: left; vertical-align: top; width: 10%;">{Number(history.value_in_currency).toLocaleString('id-ID')}</td>
-              <td style="text-align: left; vertical-align: top; width: 20%;">{history.note}</td>
-              <td style="text-align: right; vertical-align: top; width: 5%;">
-                <button class="btn-delete-in-table" title="Delete Asset" on:click={() => handleDeleteAssetHistory(history.id)}>
-                  <Icon icon="mdi:trash-can" width="14" height="14" style="margin-top: 0.2rem;"/>
-                </button>
-              </td>
-            </tr>
-            {/each}
+    {#if expandedCategories[category.id]}
+      {#if assets.filter((asset) => asset.category_id === category.id).length > 0}
+        {#each assets.filter((asset) => asset.category_id === category.id) as asset (asset.id)}
+        {#if asset.total_value > 0 || zeroValueAsset === 'show'}
+        <div class="asset-title-row">
+          <h5 class="asset-title-row-name">
+            {asset.name} {#if asset.description} ({asset.description}) {/if}
+            {#if asset.depreciation_rate}
+              <small style="color: #9ca3af; font-size: 0.7em; margin-top: 0.5em; display: block;">
+                <i>Depreciation: {asset.depreciation_rate}% / Month</i>
+              </small>
             {/if}
-          </tbody>
-          <tfoot class="table-footer">
-            {#if assetHistory.filter((history) => history.asset_id === asset.id).length === 0}
-            <tr style="cursor: pointer;" on:click={() => {
-              handleDeleteAsset(asset.id);
-            }}>
-              <td colspan="6" class="empty-row" style="color: #F76E6F;">
-                <Icon icon="mdi:trash-can" width="17" height="17" /> Delete asset
-              </td>
-            </tr>
-            {/if}
-            <tr style="cursor: pointer;" on:click={() => {
-              showAddAssetHistoryModal = true;
-              selectedAsset = asset;
-              checkDepreciationRate(asset);
-            }}>
-              <td colspan="6" class="empty-row">
-                + Add new history
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+          </h5>
+          <h5 style="margin-bottom: 0.5rem; text-align: left;">
+            {asset.currency} {Number(asset.total_value).toLocaleString('id-ID')}
+          </h5>
+        </div>
+        <div class="table-responsive">
+          <table class="asset-table">
+            <thead class="table-header">
+              <tr>
+                <th>Year</th>
+                <th>Month</th>
+                <th>Total Asset</th>
+                <th>Value in Currency</th>
+                <th>Note</th>
+                <th style="text-align: center;">#</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#if assetHistory.filter((history) => history.asset_id === asset.id).length > 0}
+              {#each assetHistory.filter((history) => history.asset_id === asset.id) as history (history.id)}
+              <tr>
+                <td style="text-align: left; vertical-align: top; width: 10%;">{history.year}</td>
+                <td style="text-align: left; vertical-align: top; width: 20%;">
+                  {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(history.month)-1]}
+                </td>
+                <td style="text-align: left; vertical-align: top; width: 10%;">{history.value}</td>
+                <td style="text-align: left; vertical-align: top; width: 10%;">{Number(history.value_in_currency).toLocaleString('id-ID')}</td>
+                <td style="text-align: left; vertical-align: top; width: 20%;">{history.note}</td>
+                <td style="text-align: right; vertical-align: top; width: 5%;">
+                  <button class="btn-delete-in-table" title="Delete Asset" on:click={() => handleDeleteAssetHistory(history.id)}>
+                    <Icon icon="mdi:trash-can" width="14" height="14" style="margin-top: 0.2rem;"/>
+                  </button>
+                </td>
+              </tr>
+              {/each}
+              {/if}
+            </tbody>
+            <tfoot class="table-footer">
+              {#if assetHistory.filter((history) => history.asset_id === asset.id).length === 0}
+              <tr style="cursor: pointer;" on:click={() => {
+                handleDeleteAsset(asset.id);
+              }}>
+                <td colspan="6" class="empty-row" style="color: #F76E6F;">
+                  <Icon icon="mdi:trash-can" width="17" height="17" /> Delete asset
+                </td>
+              </tr>
+              {/if}
+              <tr style="cursor: pointer;" on:click={() => {
+                showAddAssetHistoryModal = true;
+                selectedAsset = asset;
+                checkDepreciationRate(asset);
+              }}>
+                <td colspan="6" class="empty-row">
+                  + Add new history
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {/if}
+      {/each}
       {/if}
-    {/each}
     {/if}
   </div>
   {/each}
@@ -1070,7 +1097,18 @@
     font-weight: 700;
     color: #2563eb;
     margin: 0;
-    margin-left: 0.5rem;
+  }
+  .dashboard-title-button {
+    all: unset;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+  }
+  .dashboard-title-button:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 3px;
+    border-radius: 4px;
   }
   .dashboard-title-description {
     display:block;
@@ -1078,7 +1116,6 @@
     word-break:break-word;
     margin-top:0.5rem;
     color:#9CA3AF;
-    margin-left:0.5rem;
   }
   .btn-primary { background:linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%); color:var(--color-header-text); border:none; border-radius:2rem; font-size:clamp(0.95rem,2.5vw,1.1rem); font-weight:600; cursor:pointer; box-shadow:0 2px 12px var(--color-btn-shadow,rgba(79,140,255,0.12)); transition:background 0.2s,transform 0.2s; display:flex; align-items:center; gap:0.5em; padding:0.5em 1em; width:100%; justify-content:center; margin-top:0.7em; box-sizing:border-box; }
   .btn-primary:hover { background:linear-gradient(90deg, var(--color-secondary) 0%, var(--color-primary) 100%); transform:translateY(-2px) scale(1.03); }
