@@ -79,14 +79,23 @@
     font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
   }
 
+  main {
+    flex: 1;
+    width: 100%;
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 1rem 1rem 6rem;
+    box-sizing: border-box;
+  }
+
   .center-header {
     background: var(--color-header-bg);
     color: var(--color-header-text);
-    padding: 1.5rem 2rem;
-    font-size: 1.5rem;
+    padding: 1rem 1.25rem;
+    font-size: 1.15rem;
     font-weight: 700;
-    letter-spacing: 1px;
-    max-width: 950px !important;
+    letter-spacing: 0.5px;
+    max-width: 430px !important;
     box-shadow: var(--color-header-shadow);
     display: flex;
     justify-content: space-between;
@@ -101,11 +110,11 @@
   .center-footer {
     background: var(--color-header-bg);
     color: var(--color-header-text);
-    padding: 1.5rem 2rem;
-    font-size: 0.7rem;
+    padding: 0.85rem 1.25rem;
+    font-size: 0.65rem;
     font-weight: 500;
-    letter-spacing: 1px;
-    max-width: 950px !important;
+    letter-spacing: 0.5px;
+    max-width: 430px !important;
     box-shadow: var(--color-header-shadow);
     display: flex;
     justify-content: center;
@@ -230,42 +239,28 @@
     border: none;
   }
 
-  @media (max-width: 900px) {
+  @media (min-width: 431px) {
+    .layout-container {
+      background: linear-gradient(180deg, #e8eef8 0%, var(--color-bg) 120px);
+    }
+    .center-header,
+    .center-footer,
     main {
-      max-width: 100%;
-      padding: 1.5rem 1rem;
+      box-shadow: 0 0 0 1px rgba(79, 140, 255, 0.06);
+    }
+  }
+
+  @media (max-width: 430px) {
+    main {
+      padding: 0.85rem 0.85rem 6rem;
     }
     .center-header {
-      padding: 1.2rem 1rem;
-      font-size: 1.2rem;
+      padding: 0.9rem 1rem;
+      font-size: 1.05rem;
     }
     .user-dropdown {
       min-width: 170px;
       font-size: 0.97rem;
-    }
-  }
-
-  @media (max-width: 600px) {
-    .layout-container {
-      font-size: 0.97rem;
-    }
-    .center-header {
-      padding: 1rem 0.5rem;
-      font-size: 1rem;
-      text-align: center;
-    }
-    main {
-      padding: 1rem 0.3rem;
-    }
-    .center-footer {
-      font-size: 0.7rem;
-      padding: 0.7rem 0;
-    }
-    .user-dropdown {
-      right: 0;
-      left: auto;
-      min-width: 140px;
-      font-size: 0.93rem;
     }
   }
 </style>

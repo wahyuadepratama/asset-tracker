@@ -49,6 +49,53 @@
 
   let expandedCategories: Record<string, boolean> = {};
 
+  type ActiveView = 'data' | 'statistics';
+  let activeView: ActiveView = 'data';
+  let showAppMenu = false;
+
+  const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  function setActiveView(view: ActiveView) {
+    activeView = view;
+    showAppMenu = false;
+  }
+
+  function toggleAppMenu() {
+    showAppMenu = !showAppMenu;
+  }
+
+  function closeAppMenu() {
+    showAppMenu = false;
+  }
+
+  function getCategoryById(categoryId: string) {
+    return assetCategories.find((category) => category.id === categoryId);
+  }
+
+  function getAssetsByCategory(categoryId: string) {
+    return assets.filter((asset) => asset.category_id === categoryId);
+  }
+
+  function getVisibleAssetsByCategory(categoryId: string) {
+    return getAssetsByCategory(categoryId).filter(
+      (asset) => asset.total_value > 0 || zeroValueAsset === 'show'
+    );
+  }
+
+  $: totalAssets = assets.reduce((sum, asset) => {
+    const category = getCategoryById(asset.category_id);
+    const value = Number(asset.total_value) || 0;
+    return category?.is_liability ? sum : sum + value;
+  }, 0);
+
+  $: totalLiabilities = assets.reduce((sum, asset) => {
+    const category = getCategoryById(asset.category_id);
+    const value = Number(asset.total_value) || 0;
+    return category?.is_liability ? sum + value : sum;
+  }, 0);
+
+  $: netWorth = totalAssets - totalLiabilities;
+
   let newHistory: any = {
     year: new Date().getFullYear(),
     month: '',
@@ -537,235 +584,299 @@
 
 {#if loading}
   <div class="loading-container">
-    <h3 class="loading-title">Loading...</h3>
+    <div class="loading-spinner" aria-hidden="true"></div>
+    <h3 class="loading-title">Memuat data...</h3>
   </div>
 {/if}
 
 {#if !loading}
-<div class="dashboard-navbar">
-  <select class="input" bind:value={zeroValueAsset}>
-    <option value="hide">Hide Zero Value Asset</option>
-    <option value="show">Show Zero Value Asset</option>
-  </select>
-</div>
-{/if}
-
-{#if !loading}
-  <!-- Asset Growth Chart -->
-  <div class="asset-growth-chart-container-title">
-    <select class="input" bind:value={selectedChartCategoryId} on:change={() => handleFilterChart()}>
-      <option value="" disabled selected>Select Category</option>
-      <option value="all">All Categories</option>
-      {#each assetCategories as category}
-        <option value={category.id}>{category.name}</option>
-      {/each}
-    </select>
-    <div style="display: flex; gap: 0.7rem; align-items: center;">
-      <select
-        id="startYear"
-        class="input"
-        bind:value={startYear}
-        on:change={async () => {
-          await handleFilterChart();
-        }}
-        style="min-width: 90px;"
-      >
-        <option value="" disabled selected={startYear === ''}>Start Year</option>
-        {#each Array.from({ length: 11 }, (_, i) => currentYear - 5 + i) as year}
-          <option value={year} selected={+startYear === year}>{year}</option>
-        {/each}
-      </select>
-      <select
-        id="endYear"
-        class="input"
-        bind:value={endYear}
-        on:change={async () => {
-          await handleFilterChart();
-        }}
-        style="min-width: 90px;"
-      >
-        <option value="" disabled selected={endYear === ''}>End Year</option>
-        {#each Array.from({ length: 11 }, (_, i) => currentYear - 5 + i) as year}
-          <option value={year} selected={+endYear === year}>{year}</option>
-        {/each}
-      </select>
+<div class="dashboard-shell">
+  <section class="view-header">
+    <div class="view-header__text">
+      <p class="view-eyebrow">{activeView === 'statistics' ? 'Ringkasan' : 'Portfolio'}</p>
+      <h1 class="view-title">{activeView === 'statistics' ? 'Statistik' : 'Data Aset'}</h1>
     </div>
-  </div>
-  {#if dataChart.length > 0}
-    <div class="asset-growth-chart-container">
-      <AssetGrowthChart assetHistory={dataChart} />
+    {#if activeView === 'data'}
+      <div class="view-header__actions">
+        <select class="input input-compact" bind:value={zeroValueAsset} aria-label="Filter aset nol">
+          <option value="hide">Sembunyikan nilai 0</option>
+          <option value="show">Tampilkan nilai 0</option>
+        </select>
+      </div>
+    {/if}
+  </section>
+
+  {#if activeView === 'statistics'}
+    <section class="summary-grid" aria-label="Ringkasan keuangan">
+      <article class="summary-card summary-card--primary">
+        <span class="summary-label">Net Worth</span>
+        <strong class="summary-value">IDR {netWorth.toLocaleString('id-ID')}</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Total Aset</span>
+        <strong class="summary-value">IDR {totalAssets.toLocaleString('id-ID')}</strong>
+      </article>
+      <article class="summary-card summary-card--danger">
+        <span class="summary-label">Total Hutang</span>
+        <strong class="summary-value">IDR {totalLiabilities.toLocaleString('id-ID')}</strong>
+      </article>
+    </section>
+
+    <section class="panel" aria-label="Filter statistik">
+      <div class="panel-heading">
+        <Icon icon="mdi:filter-variant" width="18" height="18" />
+        <span>Filter Chart</span>
+      </div>
+      <div class="filter-stack">
+        <select class="input" bind:value={selectedChartCategoryId} on:change={() => handleFilterChart()}>
+          <option value="" disabled selected>Pilih Kategori</option>
+          <option value="all">Semua Kategori</option>
+          {#each assetCategories as category}
+            <option value={category.id}>{category.name}</option>
+          {/each}
+        </select>
+        <div class="filter-row">
+          <select id="startYear" class="input" bind:value={startYear} on:change={async () => { await handleFilterChart(); }}>
+            <option value="" disabled selected={startYear === ''}>Tahun Awal</option>
+            {#each Array.from({ length: 11 }, (_, i) => currentYear - 5 + i) as year}
+              <option value={year} selected={+startYear === year}>{year}</option>
+            {/each}
+          </select>
+          <select id="endYear" class="input" bind:value={endYear} on:change={async () => { await handleFilterChart(); }}>
+            <option value="" disabled selected={endYear === ''}>Tahun Akhir</option>
+            {#each Array.from({ length: 11 }, (_, i) => currentYear - 5 + i) as year}
+              <option value={year} selected={+endYear === year}>{year}</option>
+            {/each}
+          </select>
+        </div>
+      </div>
+    </section>
+
+    {#if dataChart.length > 0}
+      <section class="chart-card">
+        <h2 class="chart-title">Pertumbuhan Aset</h2>
+        <div class="chart-body">
+          <AssetGrowthChart assetHistory={dataChart} />
+        </div>
+      </section>
       {#if selectedChartCategoryId !== 'all'}
-      <br>
-      <AssetValueChart assetHistory={dataChart} />
+        <section class="chart-card">
+          <h2 class="chart-title">Nilai Aset</h2>
+          <div class="chart-body">
+            <AssetValueChart assetHistory={dataChart} />
+          </div>
+        </section>
       {/if}
-    </div>
+      {#if selectedChartCategoryId === 'all'}
+        <section class="chart-card">
+          <h2 class="chart-title">Alokasi Aset</h2>
+          <div class="chart-body">
+            <AssetAllocationPie assets={assets} assetCategories={assetCategories} />
+          </div>
+        </section>
+        <section class="chart-card">
+          <h2 class="chart-title">Alokasi Tanpa Hutang</h2>
+          <div class="chart-body">
+            <AssetAllocationDoughnutExLiability assets={assets} assetCategories={assetCategories} />
+          </div>
+        </section>
+        <section class="chart-card">
+          <h2 class="chart-title">Hutang vs Non-Hutang</h2>
+          <div class="chart-body">
+            <AssetAllocationPieLiabilityvsNon assets={assets} assetCategories={assetCategories} />
+          </div>
+        </section>
+      {/if}
+    {:else if selectedChartCategoryId !== 'all'}
+      <section class="empty-state">
+        <Icon icon="mdi:chart-line-variant" width="40" height="40" />
+        <p>Belum ada data chart. Pilih kategori atau rentang tahun lain.</p>
+      </section>
+    {/if}
   {/if}
-  {#if dataChart.length > 0 && selectedChartCategoryId === 'all'}
-    <div class="asset-growth-chart-container">
-      <AssetAllocationPie assets={assets} assetCategories={assetCategories} />
-    </div>
-    <div class="asset-growth-chart-container">
-      <AssetAllocationDoughnutExLiability assets={assets} assetCategories={assetCategories} />
-    </div>
-    <div class="asset-growth-chart-container">
-      <AssetAllocationPieLiabilityvsNon assets={assets} assetCategories={assetCategories} />
-    </div>
-  {/if}
-  {#if dataChart.length === 0 && selectedChartCategoryId !== 'all'}
-    <div class="asset-growth-chart-container-empty">
-      <p class="asset-growth-chart-description">No Chart Data Available. Please select a category to see the chart.</p>
-    </div>
-  {/if}
-{/if}
 
-{#if assetCategories.length > 0}
-<!-- Categories -->
-  {#each assetCategories as category (category.id)}
-  <div class="dashboard-container">
-    <div class="dashboard-title-row">
-      <div style="flex: 1 1 auto;display:flex;align-items:center;">
-        <button
-          title={expandedCategories[category.id] ? 'Collapse' : 'Expand'}
-          class="btn-collapser"
-          aria-label={expandedCategories[category.id] ? 'Collapse category' : 'Expand category'}
-          on:click={() => toggleCategoryCollapse(category.id)}
-          style="margin-right: 1rem; border: none; background: transparent; cursor: pointer; display: flex; align-items: center;"
-        >
-          <Icon icon={expandedCategories[category.id] ? "mdi:chevron-down" : "mdi:chevron-right"} width="28" height="28" />
-        </button>
-        <div style="display: flex; flex-direction: column;">
-          <h2 class="dashboard-title" style="margin-left: 0;">
+  {#if activeView === 'data'}
+    {#if assetCategories.length > 0}
+      {#each assetCategories as category (category.id)}
+        {@const categoryAssets = getVisibleAssetsByCategory(category.id)}
+        <article class="category-card">
+          <header class="category-header">
             <button
               type="button"
-              class="dashboard-title-button"
-              on:click={() => {
-                showUpdateCategoryModal = true;
-                selectedCategory = category;
-              }}
+              class="category-toggle"
+              aria-label={expandedCategories[category.id] ? 'Tutup kategori' : 'Buka kategori'}
+              on:click={() => toggleCategoryCollapse(category.id)}
             >
-              {category.name} {#if category.is_liability} (Liability) {/if}
-              <Icon icon="mdi:pencil" width="20" height="20"/>
+              <Icon icon={expandedCategories[category.id] ? 'mdi:chevron-up' : 'mdi:chevron-down'} width="22" height="22" />
             </button>
-          </h2>
-          {#if category.description}
-            <small class="dashboard-title-description">
-              {category.description}
-            </small>
-          {/if}
-        </div>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-left: auto;">
-        <button class="btn-primary" title="Add Asset" style="display: flex; align-items: center; gap: 0.3rem;" on:click={() => {
-          showAddAssetModal = true;
-          assetCategoryId = category.id;
-        }}>
-          <Icon icon="mdi:plus" width="22" height="22" />
-        </button>
-        {#if assets.filter((asset) => asset.category_id === category.id).length === 0}
-        <button class="btn-primary btn-delete" title="Delete Category" style="display: flex; align-items: center; gap: 0.3rem;" on:click={() => {
-          handleDeleteCategory(category.id);
-        }}>
-          <Icon icon="mdi:trash-can" width="20" height="20" />
-        </button>
-        {/if}
-      </div>
-    </div>
-    <hr style="margin: 0.5rem 0;border-color: #d9dbdf4f;">
-    {#if expandedCategories[category.id]}
-      {#if assets.filter((asset) => asset.category_id === category.id).length > 0}
-        {#each assets.filter((asset) => asset.category_id === category.id) as asset (asset.id)}
-        {#if asset.total_value > 0 || zeroValueAsset === 'show'}
-        <div class="asset-title-row">
-          <h5 class="asset-title-row-name">
-            {asset.name} {#if asset.description} ({asset.description}) {/if}
-            {#if asset.depreciation_rate}
-              <small style="color: #9ca3af; font-size: 0.7em; margin-top: 0.5em; display: block;">
-                <i>Depreciation: {asset.depreciation_rate}% / Month</i>
-              </small>
-            {/if}
-          </h5>
-          <h5 style="margin-bottom: 0.5rem; text-align: left;">
-            {asset.currency} {Number(asset.total_value).toLocaleString('id-ID')}
-          </h5>
-        </div>
-        <div class="table-responsive">
-          <table class="asset-table">
-            <thead class="table-header">
-              <tr>
-                <th>Year</th>
-                <th>Month</th>
-                <th>Total Asset</th>
-                <th>Value in Currency</th>
-                <th>Note</th>
-                <th style="text-align: center;">#</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#if assetHistory.filter((history) => history.asset_id === asset.id).length > 0}
-              {#each assetHistory.filter((history) => history.asset_id === asset.id) as history (history.id)}
-              <tr>
-                <td style="text-align: left; vertical-align: top; width: 10%;">{history.year}</td>
-                <td style="text-align: left; vertical-align: top; width: 20%;">
-                  {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(history.month)-1]}
-                </td>
-                <td style="text-align: left; vertical-align: top; width: 10%;">{history.value}</td>
-                <td style="text-align: left; vertical-align: top; width: 10%;">{Number(history.value_in_currency).toLocaleString('id-ID')}</td>
-                <td style="text-align: left; vertical-align: top; width: 20%;">{history.note}</td>
-                <td style="text-align: right; vertical-align: top; width: 5%;">
-                  <button class="btn-delete-in-table" title="Delete Asset" on:click={() => handleDeleteAssetHistory(history.id)}>
-                    <Icon icon="mdi:trash-can" width="14" height="14" style="margin-top: 0.2rem;"/>
-                  </button>
-                </td>
-              </tr>
+            <div class="category-meta">
+              <button
+                type="button"
+                class="category-name-btn"
+                on:click={() => {
+                  showUpdateCategoryModal = true;
+                  selectedCategory = category;
+                }}
+              >
+                {category.name}
+                {#if category.is_liability}
+                  <span class="badge badge--danger">Hutang</span>
+                {/if}
+                <Icon icon="mdi:pencil-outline" width="16" height="16" />
+              </button>
+              {#if category.description}
+                <p class="category-desc">{category.description}</p>
+              {/if}
+            </div>
+            <div class="category-actions">
+              <button
+                type="button"
+                class="icon-btn icon-btn--primary"
+                title="Tambah Aset"
+                on:click={() => {
+                  showAddAssetModal = true;
+                  assetCategoryId = category.id;
+                }}
+              >
+                <Icon icon="mdi:plus" width="20" height="20" />
+              </button>
+              {#if getAssetsByCategory(category.id).length === 0}
+                <button
+                  type="button"
+                  class="icon-btn icon-btn--danger"
+                  title="Hapus Kategori"
+                  on:click={() => handleDeleteCategory(category.id)}
+                >
+                  <Icon icon="mdi:trash-can-outline" width="18" height="18" />
+                </button>
+              {/if}
+            </div>
+          </header>
+          {#if expandedCategories[category.id]}
+            {#if categoryAssets.length > 0}
+              {#each categoryAssets as asset (asset.id)}
+                <section class="asset-card">
+                  <div class="asset-header">
+                    <div>
+                      <h3 class="asset-name">{asset.name}</h3>
+                      {#if asset.description}
+                        <p class="asset-desc">{asset.description}</p>
+                      {/if}
+                      {#if asset.depreciation_rate}
+                        <p class="asset-depreciation">Depresiasi: {asset.depreciation_rate}% / bulan</p>
+                      {/if}
+                    </div>
+                    <p class="asset-value">{asset.currency} {Number(asset.total_value).toLocaleString('id-ID')}</p>
+                  </div>
+                  <div class="history-list">
+                    <div class="history-scroll">
+                      {#each assetHistory.filter((history) => history.asset_id === asset.id) as history (history.id)}
+                      <div class="history-item">
+                        <div class="history-main">
+                          <span class="history-date">{monthLabels[Number(history.month) - 1]} {history.year}</span>
+                          <span class="history-amount">{Number(history.value_in_currency).toLocaleString('id-ID')}</span>
+                        </div>
+                        <div class="history-sub">
+                          <span>Qty: {history.value}</span>
+                          {#if history.note}
+                            <span class="history-note">{history.note}</span>
+                          {/if}
+                        </div>
+                        <button
+                          type="button"
+                          class="history-delete"
+                          title="Hapus riwayat"
+                          on:click={() => handleDeleteAssetHistory(history.id)}
+                        >
+                          <Icon icon="mdi:trash-can-outline" width="16" height="16" />
+                        </button>
+                      </div>
+                    {:else}
+                      <button type="button" class="history-empty" on:click={() => handleDeleteAsset(asset.id)}>
+                        <Icon icon="mdi:trash-can-outline" width="16" height="16" />
+                        Hapus aset (belum ada riwayat)
+                      </button>
+                    {/each}
+                    </div>
+                    <button
+                      type="button"
+                      class="history-add"
+                      on:click={() => {
+                        showAddAssetHistoryModal = true;
+                        selectedAsset = asset;
+                        checkDepreciationRate(asset);
+                      }}
+                    >
+                      <Icon icon="mdi:plus" width="18" height="18" />
+                      Tambah riwayat
+                    </button>
+                  </div>
+                </section>
               {/each}
-              {/if}
-            </tbody>
-            <tfoot class="table-footer">
-              {#if assetHistory.filter((history) => history.asset_id === asset.id).length === 0}
-              <tr style="cursor: pointer;" on:click={() => {
-                handleDeleteAsset(asset.id);
-              }}>
-                <td colspan="6" class="empty-row" style="color: #F76E6F;">
-                  <Icon icon="mdi:trash-can" width="17" height="17" /> Delete asset
-                </td>
-              </tr>
-              {/if}
-              <tr style="cursor: pointer;" on:click={() => {
-                showAddAssetHistoryModal = true;
-                selectedAsset = asset;
-                checkDepreciationRate(asset);
-              }}>
-                <td colspan="6" class="empty-row">
-                  + Add new history
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        {/if}
+            {:else if getAssetsByCategory(category.id).length === 0}
+              <p class="category-empty">Belum ada aset di kategori ini.</p>
+            {:else}
+              <p class="category-empty">Semua aset disembunyikan (nilai 0).</p>
+            {/if}
+          {/if}
+        </article>
       {/each}
-      {/if}
+    {:else}
+      <section class="empty-state">
+        <Icon icon="mdi:folder-open-outline" width="40" height="40" />
+        <p>Belum ada kategori. Tambahkan kategori pertama Anda.</p>
+      </section>
     {/if}
-  </div>
-  {/each}
-{/if}
+    <button type="button" class="add-category-btn" on:click={() => { showAddCategoryModal = true; }}>
+      <Icon icon="mdi:folder-plus-outline" width="20" height="20" />
+      Tambah Kategori
+    </button>
+  {/if}
 
-{#if !loading}
-<!-- Add Category Button -->
-<div class="button-container">
-  <button
-    class="btn-primary"
-    on:click={() => {
-      showAddCategoryModal = true;
-    }}>
-    <Icon
-      icon="mdi:plus"
-      width="20"
-      height="20"
-      style="flex-shrink: 0;"
-    />
-    <span style="white-space: nowrap;">Add Category</span>
-  </button>
+  {#if showAppMenu}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="app-menu-backdrop" on:click={closeAppMenu} role="presentation"></div>
+  {/if}
+
+  <nav class="floating-nav" aria-label="Navigasi utama">
+    {#if showAppMenu}
+      <div class="app-menu-sheet">
+        <p class="app-menu-label">Menu</p>
+        <div class="app-menu-grid">
+          <button type="button" class="app-menu-item" class:app-menu-item--active={activeView === 'data'} on:click={() => setActiveView('data')}>
+            <span class="app-menu-icon app-menu-icon--blue"><Icon icon="mdi:database-outline" width="24" height="24" /></span>
+            <span>Data</span>
+          </button>
+          <button type="button" class="app-menu-item" class:app-menu-item--active={activeView === 'statistics'} on:click={() => setActiveView('statistics')}>
+            <span class="app-menu-icon app-menu-icon--violet"><Icon icon="mdi:chart-areaspline" width="24" height="24" /></span>
+            <span>Statistik</span>
+          </button>
+          <button type="button" class="app-menu-item" on:click={() => { closeAppMenu(); showAddCategoryModal = true; }}>
+            <span class="app-menu-icon app-menu-icon--green"><Icon icon="mdi:folder-plus-outline" width="24" height="24" /></span>
+            <span>Kategori</span>
+          </button>
+          <button type="button" class="app-menu-item" on:click={() => { closeAppMenu(); showAddAssetModal = true; }}>
+            <span class="app-menu-icon app-menu-icon--amber"><Icon icon="mdi:plus-box-outline" width="24" height="24" /></span>
+            <span>Aset</span>
+          </button>
+        </div>
+      </div>
+    {/if}
+    <div class="floating-dock">
+      <button type="button" class="dock-btn" class:dock-btn--active={activeView === 'data'} on:click={() => setActiveView('data')}>
+        <Icon icon="mdi:database-outline" width="22" height="22" />
+        <span>Data</span>
+      </button>
+      <button type="button" class="dock-menu-btn" class:dock-menu-btn--open={showAppMenu} aria-label="Buka menu aplikasi" aria-expanded={showAppMenu} on:click={toggleAppMenu}>
+        <Icon icon={showAppMenu ? 'mdi:close' : 'mdi:apps'} width="26" height="26" />
+      </button>
+      <button type="button" class="dock-btn" class:dock-btn--active={activeView === 'statistics'} on:click={() => setActiveView('statistics')}>
+        <Icon icon="mdi:chart-areaspline" width="22" height="22" />
+        <span>Statistik</span>
+      </button>
+    </div>
+  </nav>
 </div>
 {/if}
 
@@ -1034,254 +1145,697 @@
 </Modal>
 
 <style>
-  .asset-growth-chart-container-title {
+  .dashboard-shell {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-    max-width: 900px;
-    margin: 0 auto;
-  }
-  .asset-growth-chart-container-empty {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 1.5rem 0;
-  }
-  .asset-growth-chart-description {
-    font-size: 1rem;
-    font-weight: 500;
-    color: #9ca3af;
-    margin: 0;
-  }
-  .dashboard-container {
-    max-width: 900px;
-    margin: 2rem auto;
-    background: #fff;
-    border-radius: 1.2rem;
-    box-shadow: 0 2px 16px rgba(79,140,255,0.07);
-    padding: 1.5rem 1.2rem 2rem 1.2rem;
-  }
-  .dashboard-navbar {
-    max-width: 900px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: right;
-    margin-bottom: 1.5rem;
-    padding-top: 1.5rem;
-  }
-  .button-container{
-    display: flex;
-    justify-content: center;
-    margin-top: 1.5rem;
-    margin-bottom: 1.5rem;
+    flex-direction: column;
     gap: 1rem;
-  }
-  .button-container button{
+    padding-bottom: 1rem;
     width: 100%;
-    max-width: 170px;
-    margin: 0 0.5rem;
+    max-width: 100%;
+    box-sizing: border-box;
   }
-  .dashboard-title-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.5rem;
-    gap: 1rem;
-  }
-  .dashboard-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #2563eb;
-    margin: 0;
-  }
-  .dashboard-title-button {
-    all: unset;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    cursor: pointer;
-  }
-  .dashboard-title-button:focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: 3px;
-    border-radius: 4px;
-  }
-  .dashboard-title-description {
-    display:block;
-    max-width:90%;
-    word-break:break-word;
-    margin-top:0.5rem;
-    color:#9CA3AF;
-  }
-  .btn-primary { background:linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%); color:var(--color-header-text); border:none; border-radius:2rem; font-size:clamp(0.95rem,2.5vw,1.1rem); font-weight:600; cursor:pointer; box-shadow:0 2px 12px var(--color-btn-shadow,rgba(79,140,255,0.12)); transition:background 0.2s,transform 0.2s; display:flex; align-items:center; gap:0.5em; padding:0.5em 1em; width:100%; justify-content:center; margin-top:0.7em; box-sizing:border-box; }
-  .btn-primary:hover { background:linear-gradient(90deg, var(--color-secondary) 0%, var(--color-primary) 100%); transform:translateY(-2px) scale(1.03); }
-  .asset-growth-chart-container {
-    width: 100%;
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 1.5rem 0;
-  }
-  .asset-title-row {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin: 0.5rem;
-    font-size: 1.2rem;
-  }
-  .asset-title-row-name {
-    margin-bottom: 0.5rem;
-    text-align: left;
-    max-width: 50%;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    white-space: normal;
-  }
-  .asset-title-row h5 {
-    color: var(--color-primary);
-  }
-  .table-responsive {
-    width: 100%;
-    overflow-x: auto;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-  .table-header {
-    position: sticky;
-    top: 0;
-    background: #f1f5f9;
-    z-index: 1;
-  }
-  .table-footer {
-    position: sticky;
-    bottom: 0;
-    background: #f9fafb;
-    z-index: 1;
-  }
-  .table-footer tr:hover {
-    background: #f1f5f9 !important;
-    cursor: pointer;
-  }
-  .asset-table tr:hover td {
-    background: #f1f5f9;
-    cursor: pointer;
-  }
-  .asset-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #f9fafb;
-    border-radius: 0.7rem;
-    /* overflow: hidden; */
-    font-size: 1rem;
-  }
-  .asset-table th, .asset-table td {
-    padding: 0.5rem 1rem !important;
-    text-align: left;
-  }
-  .asset-table th {
-    background: #f1f5f9;
-    color: #2563eb;
-    font-weight: 600;
-    border-bottom: 2px solid #e5e7eb;
-    padding: 0.5rem 1rem !important;
-  }
-  .asset-table tr:not(:last-child) td {
-    border-bottom: 1px solid #e5e7eb;
-  }
-  .empty-row {
-    text-align: center !important;
-    color: #9ca3af;
-    font-style: italic;
-    padding: 1rem;
-  }
-  .btn-delete {
-    background: linear-gradient(90deg, #e11d48 0%, #f87171 100%);
-    color: #fff;
-    font-weight: 700;
-    border: none;
-    border-radius: 2rem;
-  }
-  .btn-delete-in-table {
-    background: linear-gradient(90deg, #e11d48 0%, #f87171 100%);
-    color: #fff;
-    font-weight: 700;
-    border: none;
-    border-radius: 2rem;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    box-shadow: 0 2px 12px rgba(37, 99, 235, 0.10);
-    transition: background 0.2s, transform 0.2s;
-    cursor: pointer;
-    flex-direction: row;
-  }
-  .btn-delete-in-table:hover {
-    background: linear-gradient(90deg, #f87171 0%, #e11d48 100%);
-    transform: translateY(-2px) scale(1.03);
-  }
-  .modal-add-category {
-    width: 100%;
-    max-width: 350px;
-    margin: 0 auto;
+
+  .view-header {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 1.2rem;
+    width: 100%;
+    gap: 0.65rem;
+    box-sizing: border-box;
   }
+
+  .view-header__text {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .view-header__actions {
+    width: 100%;
+  }
+
+  .view-eyebrow {
+    margin: 0;
+    font-size: clamp(0.65rem, 2.8vw, 0.72rem);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+  }
+
+  .view-title {
+    margin: 0.15rem 0 0;
+    font-size: clamp(1.05rem, 5vw, 1.35rem);
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .input-compact {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    font-size: clamp(0.75rem, 3.2vw, 0.85rem);
+    padding: 0.55rem 0.75rem;
+    box-sizing: border-box;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .summary-card {
+    background: #fff;
+    border: 1px solid #e8eef6;
+    border-radius: 1rem;
+    padding: 0.85rem 1rem;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+  }
+
+  .summary-card--primary {
+    background: linear-gradient(135deg, #4f8cff 0%, #6ea8ff 100%);
+    border-color: transparent;
+    color: #fff;
+  }
+
+  .summary-card--danger .summary-label {
+    color: #f87171;
+  }
+
+  .summary-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: inherit;
+    opacity: 0.85;
+    margin-bottom: 0.35rem;
+  }
+
+  .summary-card:not(.summary-card--primary) .summary-label {
+    color: #64748b;
+  }
+
+  .summary-value {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    word-break: break-word;
+  }
+
+  .summary-card--danger .summary-value {
+    color: #dc2626;
+  }
+
+  .panel,
+  .chart-card,
+  .category-card {
+    background: #fff;
+    border: 1px solid #e8eef6;
+    border-radius: 1rem;
+    padding: 1rem;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .panel-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.75rem;
+  }
+
+  .filter-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .filter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.55rem;
+  }
+
+  .chart-title {
+    margin: 0 0 0.75rem;
+    font-size: clamp(0.78rem, 3.4vw, 0.95rem);
+    font-weight: 600;
+    color: #475569;
+    line-height: 1.35;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+
+  .chart-body {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .chart-body :global(> div) {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .chart-body :global(canvas) {
+    max-width: 100%;
+    height: auto !important;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #94a3b8;
+    background: #fff;
+    border: 1px dashed #dbeafe;
+    border-radius: 1rem;
+  }
+
+  .empty-state p {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  .category-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .category-toggle {
+    border: none;
+    background: #f1f5f9;
+    color: #475569;
+    border-radius: 0.65rem;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .category-meta {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .category-name-btn {
+    all: unset;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e40af;
+  }
+
+  .category-desc {
+    margin: 0.35rem 0 0;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: #94a3b8;
+  }
+
+  .category-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex-shrink: 0;
+  }
+
+  .badge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .badge--danger {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+
+  .icon-btn {
+    border: none;
+    border-radius: 0.65rem;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .icon-btn--primary {
+    background: linear-gradient(135deg, #4f8cff, #6ea8ff);
+    color: #fff;
+  }
+
+  .icon-btn--danger {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+
+  .category-empty {
+    margin: 0.75rem 0 0;
+    font-size: 0.82rem;
+    color: #94a3b8;
+    text-align: center;
+    padding: 0.5rem;
+  }
+
+  .asset-card {
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .asset-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .asset-name {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .asset-desc,
+  .asset-depreciation {
+    margin: 0.2rem 0 0;
+    font-size: 0.72rem;
+    color: #94a3b8;
+  }
+
+  .asset-value {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #2563eb;
+    white-space: nowrap;
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .history-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    max-height: 12.5rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 0.2rem;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  .history-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .history-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+  }
+
+  .history-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  .history-item {
+    position: relative;
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+    border-radius: 0.75rem;
+    padding: 0.6rem 2.2rem 0.6rem 0.75rem;
+  }
+
+  .history-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .history-date {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #334155;
+  }
+
+  .history-amount {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #2563eb;
+  }
+
+  .history-sub {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+    margin-top: 0.25rem;
+    font-size: 0.72rem;
+    color: #94a3b8;
+  }
+
+  .history-note {
+    font-style: italic;
+  }
+
+  .history-delete {
+    position: absolute;
+    top: 0.45rem;
+    right: 0.45rem;
+    border: none;
+    background: transparent;
+    color: #f87171;
+    cursor: pointer;
+    padding: 0.15rem;
+    border-radius: 0.35rem;
+  }
+
+  .history-empty,
+  .history-add,
+  .add-category-btn {
+    border: 1px dashed #cbd5e1;
+    background: #f8fafc;
+    color: #64748b;
+    border-radius: 0.75rem;
+    padding: 0.65rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 100%;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .history-empty {
+    color: #dc2626;
+    border-color: #fecaca;
+    background: #fff5f5;
+  }
+
+  .history-add:hover,
+  .add-category-btn:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #2563eb;
+  }
+
+  .add-category-btn {
+    margin-top: 0.25rem;
+    border-style: solid;
+    background: linear-gradient(135deg, #4f8cff, #6ea8ff);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(79, 140, 255, 0.25);
+  }
+
+  .floating-nav {
+    position: fixed;
+    left: 50%;
+    bottom: 1rem;
+    transform: translateX(-50%);
+    width: calc(100% - 1.5rem);
+    max-width: 400px;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.65rem;
+    pointer-events: none;
+  }
+
+  .floating-nav > * {
+    pointer-events: auto;
+  }
+
+  .app-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.25);
+    backdrop-filter: blur(2px);
+    z-index: 40;
+  }
+
+  .app-menu-sheet {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 1.25rem;
+    padding: 1rem;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.15);
+    animation: sheetUp 0.22s ease-out;
+  }
+
+  @keyframes sheetUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .app-menu-label {
+    margin: 0 0 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    text-align: center;
+  }
+
+  .app-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+
+  .app-menu-item {
+    border: none;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem;
+    cursor: pointer;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #64748b;
+    border-radius: 0.75rem;
+    transition: background 0.15s;
+  }
+
+  .app-menu-item:hover,
+  .app-menu-item--active {
+    background: #f1f5f9;
+    color: #1e40af;
+  }
+
+  .app-menu-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+
+  .app-menu-icon--blue { background: linear-gradient(135deg, #4f8cff, #2563eb); }
+  .app-menu-icon--violet { background: linear-gradient(135deg, #8b5cf6, #6366f1); }
+  .app-menu-icon--green { background: linear-gradient(135deg, #22c55e, #16a34a); }
+  .app-menu-icon--amber { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+  .floating-dock {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    padding: 0.45rem;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 999px;
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(79, 140, 255, 0.08);
+  }
+
+  .dock-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.4rem 0.25rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #94a3b8;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .dock-btn--active {
+    background: #eff6ff;
+    color: #2563eb;
+  }
+
+  .dock-menu-btn {
+    width: 3.25rem;
+    height: 3.25rem;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4f8cff 0%, #2563eb 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(79, 140, 255, 0.4);
+    flex-shrink: 0;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .dock-menu-btn--open {
+    transform: rotate(90deg);
+    background: linear-gradient(135deg, #64748b, #475569);
+    box-shadow: 0 6px 20px rgba(71, 85, 105, 0.35);
+  }
+
+  .btn-primary {
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: var(--color-header-text);
+    border: none;
+    border-radius: 0.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 12px var(--color-btn-shadow, rgba(79, 140, 255, 0.12));
+    transition: background 0.2s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.65em 1em;
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(90deg, var(--color-secondary) 0%, var(--color-primary) 100%);
+    transform: translateY(-1px);
+  }
+
+  .modal-add-category,
   .modal-add-asset-history {
     width: 100%;
     max-width: 350px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
+    gap: 1.2rem;
   }
+
   .modal-title {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: #2563eb;
     margin-bottom: 0.5rem;
     text-align: center;
-    letter-spacing: 0.5px;
+    letter-spacing: -0.01em;
   }
+
   .modal-form {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
   }
+
   .form-group {
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
   }
+
   .form-group label {
     font-size: 0.75rem;
     font-weight: 600;
     color: #2563eb;
     margin-bottom: 0.3rem;
   }
+
   .input {
-    padding: 0.7rem 1rem;
+    padding: 0.65rem 0.85rem;
     border: 1.5px solid #e5e7eb;
-    border-radius: 0.7rem;
-    font-size: 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.9rem;
     background: #f8fafc;
-    transition: border 0.18s;
+    transition: border 0.18s, background 0.18s;
     outline: none;
+    width: 100%;
+    box-sizing: border-box;
   }
+
   .input:focus {
     border-color: #4f8cff;
     background: #fff;
   }
+
   .btn-block {
     width: 100%;
     padding: 0.7rem 0;
-    border-radius: 0.7rem;
-    font-size: 1.05rem;
+    border-radius: 0.75rem;
+    font-size: 0.95rem;
     font-weight: 600;
     background: linear-gradient(90deg, #38c6ff 0%, #4f8cff 100%);
     color: #fff;
@@ -1290,56 +1844,39 @@
     transition: background 0.18s;
     margin-top: 0.2rem;
   }
-  .btn-block:hover, .btn-block:focus {
+
+  .btn-block:hover,
+  .btn-block:focus {
     background: linear-gradient(90deg, #2563eb 0%, #4f8cff 100%);
   }
+
   .loading-container {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    gap: 0.75rem;
+    height: 60vh;
   }
+
+  .loading-spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid #dbeafe;
+    border-top-color: #4f8cff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
   .loading-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #2563eb;
-    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #64748b;
+    margin: 0;
     text-align: center;
-    letter-spacing: 0.5px;
-  }
-  @media (max-width: 700px) {
-    .dashboard-container {
-      padding: 1rem 0.3rem 1.2rem 0.3rem;
-      margin: 1rem 0.2rem;
-    }
-    .dashboard-title {
-      font-size: 1rem;
-      text-align: left;
-      margin-left: 0.5rem;
-    }
-    .asset-growth-chart-description {
-      font-size: 0.7rem;
-      font-weight: 500;
-      color: #9ca3af;
-      margin: 1rem;
-    }
-    .btn-primary { padding:0.2rem 0.4rem; font-size:0.7rem; }
-    .asset-table th, .asset-table td {
-      padding: 0.5rem 0.5rem;
-      font-size: 0.6rem;
-    }
-    .modal-add-category {
-      padding: 0 0.2rem;
-    }
-    .modal-title {
-      font-size: 1.05rem;
-    }
-    .input, .btn-block {
-      font-size: 0.7rem;
-      padding: 0.4rem 0.5rem;
-    }
-    .asset-title-row h5 {
-      font-size: 0.8rem;
-    }
   }
 </style>
