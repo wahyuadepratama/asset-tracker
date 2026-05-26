@@ -753,6 +753,7 @@
             </div>
           </header>
           {#if expandedCategories[category.id]}
+            <div class="card-scroll">
             {#if categoryAssets.length > 0}
               {#each categoryAssets as asset (asset.id)}
                 <section class="asset-card">
@@ -818,6 +819,7 @@
             {:else}
               <p class="category-empty">Semua aset disembunyikan (nilai 0).</p>
             {/if}
+            </div>
           {/if}
         </article>
       {/each}
@@ -1300,11 +1302,60 @@
     text-wrap: balance;
   }
 
+  .card-scroll,
+  .history-scroll {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    padding-right: 0.2rem;
+  }
+
+  .card-scroll::-webkit-scrollbar,
+  .history-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .card-scroll::-webkit-scrollbar-thumb,
+  .history-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+  }
+
+  .card-scroll::-webkit-scrollbar-thumb:hover,
+  .history-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  .card-scroll {
+    max-height: min(52vh, 30rem);
+    margin-top: 0.65rem;
+  }
+
   .chart-body {
     width: 100%;
     min-width: 0;
-    overflow-x: auto;
+    max-height: min(48vh, 26rem);
+    overflow: auto;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    padding-right: 0.2rem;
+  }
+
+  .chart-body::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .chart-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+  }
+
+  .chart-body::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
   }
 
   .chart-body :global(> div) {
@@ -1469,6 +1520,15 @@
     font-weight: 700;
     color: #2563eb;
     white-space: nowrap;
+  }
+
+  /* Mobile: jangan biarkan teks bernilai kepotong karena nowrap */
+  @media (max-width: 520px) {
+    .asset-value {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
   }
 
   .history-list {

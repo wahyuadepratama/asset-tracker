@@ -71,6 +71,10 @@
 </div>
 
 <style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
   .layout-container {
     min-height: 100vh;
     display: flex;
@@ -105,6 +109,7 @@
     margin-right: auto;
     width: 100%;
     position: relative;
+    min-width: 0;
   }
 
   .center-footer {
@@ -124,6 +129,7 @@
     margin-right: auto;
     width: 100%;
     position: relative;
+    min-width: 0;
   }
 
   .header-title {

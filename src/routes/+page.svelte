@@ -267,6 +267,10 @@
 </div>
 
 <style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
   .page {
     min-height: 100vh;
     display: flex;
@@ -1007,6 +1011,103 @@
     .footer__inner {
       flex-direction: column;
       text-align: center;
+    }
+  }
+
+  /* Extra-small tweaks for ~320px width */
+  @media (max-width: 360px) {
+    .header {
+      padding: 0.6rem 0.75rem;
+    }
+
+    .brand {
+      font-size: 1rem;
+      gap: 0.5rem;
+    }
+
+    .brand__icon {
+      width: 2rem;
+      height: 2rem;
+    }
+
+    .menu-toggle {
+      width: 2.25rem;
+      height: 2.25rem;
+      padding: 0.45rem;
+    }
+
+    .hero {
+      padding-block: 2.25rem 3rem;
+    }
+
+    .hero__title {
+      font-size: 1.95rem;
+      letter-spacing: -0.02em;
+    }
+
+    .hero__lead {
+      font-size: 0.98rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero__actions {
+      max-width: 17.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero__actions .btn--lg {
+      padding: 0.7rem 1.05rem;
+      font-size: 0.95rem;
+    }
+
+    .floating-badge {
+      font-size: 0.68rem;
+      padding: 0.35rem 0.6rem;
+    }
+
+    .preview-card {
+      padding: 1rem;
+      border-radius: 1.05rem;
+    }
+
+    .preview-card__stats {
+      grid-template-columns: 1fr;
+    }
+
+    .floating-badge--top {
+      right: 0.4rem;
+    }
+
+    .floating-badge--bottom {
+      left: 0.4rem;
+    }
+
+    .features__grid {
+      gap: 1rem;
+    }
+
+    .feature-card {
+      padding: 1.2rem;
+    }
+
+    .cta__card {
+      padding: 1.25rem;
+    }
+
+    .cta__actions {
+      width: 100%;
+      justify-content: stretch;
+    }
+
+    .cta__actions .btn {
+      width: 100%;
+    }
+
+    .nav-mobile {
+      max-width: none;
+      width: calc(100% - 2rem);
+      margin-top: 0.5rem;
+      padding: 0.85rem;
     }
   }
 
